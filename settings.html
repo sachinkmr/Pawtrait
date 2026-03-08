@@ -80,13 +80,6 @@
 </div>
 <small class="nig_hint">Refresh models from the selected provider. The list button toggles between recommended and all models.</small>
 </div>
-<div class="nig_field">
-<label for="nig_style_preset_vision_model">Vision Model (Style Presets)</label>
-<select id="nig_style_preset_vision_model" class="text_pole">
-<option value="">-- Use Summarizer Model --</option>
-</select>
-<small class="nig_hint">Model used when generating per-character style presets. Leave blank to reuse the Summarizer model. Fetch models above to populate this list.</small>
-</div>
 </div>
 </div>
 
@@ -116,6 +109,13 @@
     <div id="nig_generate_char_appearance_btn" class="menu_button menu_button_icon nig_small_btn" title="Generate Visual Description &amp; Style Preset via AI — analyzes avatar and full character card">
       <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
     </div>
+  </div>
+  <div class="nig_field" style="margin-top:12px;">
+    <label for="nig_style_preset_vision_model">Vision Model</label>
+    <select id="nig_style_preset_vision_model" class="text_pole">
+      <option value="">-- Use Summarizer Model --</option>
+    </select>
+    <small class="nig_hint">Vision-capable model used for Generate. Leave blank to reuse the Summarizer model.</small>
   </div>
   <div class="nig_collapsible" style="margin-top:12px;">
     <div id="nig_gen_prompt_toggle" class="nig_collapsible_header">

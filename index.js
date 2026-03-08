@@ -3611,10 +3611,19 @@ Describe only **visual appearance**, including when available:
 - clothing / outfit
 - overall visual vibe
 
+Do not include:
+- location (cities, countries)
+- occupation
+- personality traits
+- lifestyle assumptions
+
+Only describe traits that directly affect visible appearance.
+
 Rules:
 - Use details from **either source when clearly stated or visible**.
 - If a feature is **not clearly visible in the image or described in the card**, **do not include it**.
 - **Do not guess or hallucinate missing features.**
+- **Avoid speculative phrases such as "likely", "probably", or "suggesting".**
 - Write the visual description in **image-generation prompt style** rather than narrative.
 - Keep the description **concise (40\u2013120 words).**
 
