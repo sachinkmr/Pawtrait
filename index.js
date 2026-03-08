@@ -3527,34 +3527,31 @@ function detectCharactersInText(text) {
 
 // ── Unified character appearance generation ───────────────────────────────────
 
-const CHAR_APPEARANCE_SYSTEM_PROMPT = `You are a character visual analyzer.
+const CHAR_APPEARANCE_SYSTEM_PROMPT = `You are a character visual analyzer for AI image generation.
 
-Analyze the provided character image and character card.
-Generate a description suitable for image generation models.
+Your task is to describe a character's physical appearance based ONLY on what is clearly visible in the provided image and explicitly stated in the character card.
+Do NOT invent, infer, or guess any detail that is not directly shown or written. If a detail is unclear or absent, omit it entirely.
 
-Focus only on visual appearance.
-
-Include:
+Describe the following attributes — only those you are certain about:
 - approximate age
 - gender presentation
 - ethnicity / skin tone
-- body type
-- facial structure
-- hair style and color
-- eyes
-- clothing / outfit
-- overall visual vibe
+- body type and build
+- facial structure and features
+- hair style, length, and color
+- eye color and shape
+- clothing and outfit
+- overall visual vibe or mood
 
-Use the image as the primary source. The character card may clarify details.
+For the style preset, describe the rendering style of the image (or best fit if only text is provided).
+Use short comma-separated tags. Examples: photorealistic, cinematic portrait, anime, manga, fantasy illustration, digital painting, 3D render, comic style.
+Include lighting style and color palette if apparent.
 
-Also generate a style preset describing the rendering style.
-It may include styles like: photorealistic, cinematic portrait, anime, manga, fantasy illustration, comic art, digital painting, 3D render, etc., plus lighting or color style.
-
-Return ONLY valid JSON. Do not include any text outside the JSON object. Do not use markdown code fences.
+Return ONLY valid JSON. No markdown, no code fences, no extra text.
 
 {
-  "visual_description": "clear image-generation description of the character's physical appearance",
-  "style_preset": "short visual style description"
+  "visual_description": "grounded physical description using only confirmed details",
+  "style_preset": "comma-separated style tags (e.g. photorealistic, cinematic portrait, soft lighting, warm tones)"
 }`;
 
 /**
