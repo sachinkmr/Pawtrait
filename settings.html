@@ -88,6 +88,13 @@
   <div class="nig_section_title"><i class="fa-solid fa-user-pen"></i> Character Appearance</div>
   <small class="nig_hint" style="margin:0 0 12px;display:block;">Appearance data is injected into every image prompt. Changes are auto-saved when switching characters.</small>
   <div class="nig_field">
+    <label for="nig_style_preset_vision_model">Vision Model</label>
+    <select id="nig_style_preset_vision_model" class="text_pole">
+      <option value="">-- Use Summarizer Model --</option>
+    </select>
+    <small class="nig_hint">Vision-capable model used for Generate. Leave blank to reuse the Summarizer model.</small>
+  </div>
+  <div class="nig_field">
     <label for="nig_char_select">Character</label>
     <div class="nig_input_group">
       <select id="nig_char_select" class="text_pole"><option value="">-- Select a character --</option></select>
@@ -109,13 +116,6 @@
     <div id="nig_generate_char_appearance_btn" class="menu_button menu_button_icon nig_small_btn" title="Generate Visual Description &amp; Style Preset via AI — analyzes avatar and full character card">
       <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
     </div>
-  </div>
-  <div class="nig_field" style="margin-top:12px;">
-    <label for="nig_style_preset_vision_model">Vision Model</label>
-    <select id="nig_style_preset_vision_model" class="text_pole">
-      <option value="">-- Use Summarizer Model --</option>
-    </select>
-    <small class="nig_hint">Vision-capable model used for Generate. Leave blank to reuse the Summarizer model.</small>
   </div>
   <div class="nig_collapsible" style="margin-top:12px;">
     <div id="nig_gen_prompt_toggle" class="nig_collapsible_header">
