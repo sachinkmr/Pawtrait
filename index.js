@@ -1238,19 +1238,29 @@ function saveCharacterDescription() {
 
     const settings = extension_settings[extensionName];
     if (!settings.char_descriptions) settings.char_descriptions = {};
+    if (!settings.char_style_presets) settings.char_style_presets = {};
 
     const desc = $('#nig_char_description').val().trim();
+    const preset = $('#nig_style_preset_tags').val().trim();
     const label = getEntryDisplayLabel(entryKey);
+
     if (desc) {
         settings.char_descriptions[entryKey] = desc;
-        toastr.success(`Saved custom description for ${label}`, 'Pawtrait');
     } else {
         delete settings.char_descriptions[entryKey];
+    }
+
+    if (preset) {
+        settings.char_style_presets[entryKey] = preset;
+    } else {
+        delete settings.char_style_presets[entryKey];
     }
 
     saveSettingsDebounced();
     updateSavedCharactersList();
     updateActiveCharactersList();
+    $('#nig_style_preset_status').text('Saved ✓').css('color', 'var(--SmartThemeQuoteColor)');
+    toastr.success(`Saved description and style preset for ${label}`, 'Pawtrait');
 }
 
 /**
@@ -1263,18 +1273,23 @@ function resetCharacterDescription() {
     const settings = extension_settings[extensionName];
     const label = getEntryDisplayLabel(entryKey);
 
-    // Remove override so getEffectiveDescriptionForEntry falls back to native source
-    if (settings.char_descriptions?.[entryKey]) {
-        delete settings.char_descriptions[entryKey];
-        saveSettingsDebounced();
-        updateSavedCharactersList();
-        updateActiveCharactersList();
-        toastr.info(`Reset ${label} to default description`, 'Pawtrait');
-    }
+    // Remove overrides so lookups fall back to native sources
+    if (settings.char_descriptions?.[entryKey]) delete settings.char_descriptions[entryKey];
+    if (settings.char_style_presets?.[entryKey]) delete settings.char_style_presets[entryKey];
 
-    // Reload from native source
+    saveSettingsDebounced();
+    updateSavedCharactersList();
+    updateActiveCharactersList();
+
+    // Reload description from native source
     const freshDesc = getEffectiveDescriptionForEntry(entryKey);
     $('#nig_char_description').val(freshDesc);
+
+    // Clear style preset UI
+    $('#nig_style_preset_tags').val('');
+    $('#nig_style_preset_status').text('');
+
+    toastr.info(`Reset description and style preset for ${label}`, 'Pawtrait');
 }
 
 /**
@@ -6117,64 +6132,9 @@ jQuery(async () => {
         saveSettingsDebounced();
     });
 
-    // Style preset — manual edit
+    // Style preset — typing clears the "Saved ✓" status so user knows to Save
     $('#nig_style_preset_tags').on('input', function() {
-        const charName = $('#nig_char_select').val();
-        if (!charName) return;
-        const val = $(this).val().trim();
-        const s = extension_settings[extensionName];
-        if (!s.char_style_presets) s.char_style_presets = {};
-        if (val) {
-            s.char_style_presets[charName] = val;
-            $('#nig_style_preset_status').text('Saved ✓').css('color', 'var(--SmartThemeQuoteColor)');
-        } else {
-            delete s.char_style_presets[charName];
-            $('#nig_style_preset_status').text('');
-        }
-        saveSettingsDebounced();
-    });
-
-    // Style preset — generate button
-    $('#nig_generate_style_preset_btn').on('click', async function() {
-        const charName = $('#nig_char_select').val();
-        if (!charName) {
-            toastr.warning('Select a character first.', 'Pawtrait');
-            return;
-        }
-        const btn = $(this);
-        if (btn.hasClass('disabled')) return;
-        btn.addClass('disabled').find('i').removeClass('fa-wand-magic-sparkles').addClass('fa-spinner fa-spin');
-        $('#nig_style_preset_status').text('Generating…').css('color', '');
-
-        try {
-            const tags = await generateStylePreset(charName);
-            if (tags) {
-                const s = extension_settings[extensionName];
-                if (!s.char_style_presets) s.char_style_presets = {};
-                s.char_style_presets[charName] = tags;
-                saveSettingsDebounced();
-                $('#nig_style_preset_tags').val(tags);
-                $('#nig_style_preset_status').text('Generated ✓').css('color', 'var(--SmartThemeQuoteColor)');
-                toastr.success(`Style preset generated for ${charName}`, 'Pawtrait');
-            }
-        } catch (err) {
-            $('#nig_style_preset_status').text('Failed').css('color', 'var(--SmartThemeEmColor)');
-            toastr.error(`Style preset failed: ${err.message}`, 'Pawtrait');
-        } finally {
-            btn.removeClass('disabled').find('i').removeClass('fa-spinner fa-spin').addClass('fa-wand-magic-sparkles');
-        }
-    });
-
-    // Style preset — clear button
-    $('#nig_clear_style_preset_btn').on('click', function() {
-        const charName = $('#nig_char_select').val();
-        if (!charName) return;
-        const s = extension_settings[extensionName];
-        if (s.char_style_presets) delete s.char_style_presets[charName];
-        saveSettingsDebounced();
-        $('#nig_style_preset_tags').val('');
-        $('#nig_style_preset_status').text('');
-        toastr.info(`Cleared style preset for ${charName}`, 'Pawtrait');
+        $('#nig_style_preset_status').text('').css('color', '');
     });
 
     $('#nig_refresh_chars_btn').on('click', function() {

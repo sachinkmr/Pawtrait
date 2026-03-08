@@ -107,11 +107,6 @@
 <textarea id="nig_char_description" class="text_pole textarea_compact" rows="5" placeholder="Select a character..."></textarea>
 <small class="nig_hint">Auto-loaded from character card. Edit and save to override.</small>
 </div>
-<div class="nig_button_row" style="margin-top:8px;">
-<button type="button" id="nig_save_char_desc_btn" class="menu_button menu_button_icon"><i class="fa-solid fa-floppy-disk"></i><span>Save Custom Description</span></button>
-<button type="button" id="nig_reset_char_desc_btn" class="menu_button menu_button_icon"><i class="fa-solid fa-rotate-left"></i><span>Reset to Card</span></button>
-</div>
-<div id="nig_char_saved_list" class="nig_saved_list"></div>
 </div>
 <div class="nig_section">
 <div class="nig_section_title"><i class="fa-solid fa-palette"></i> Style Preset</div>
@@ -121,8 +116,8 @@
 <textarea id="nig_style_preset_tags" class="text_pole textarea_compact" rows="3" placeholder="e.g. anime style, soft lighting, pastel colors"></textarea>
 </div>
 <div class="nig_button_row">
-<div id="nig_generate_style_preset_btn" class="menu_button menu_button_icon nig_small_btn" title="Generate style preset via AI"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate</div>
-<div id="nig_clear_style_preset_btn" class="menu_button menu_button_icon nig_small_btn nig_danger" title="Clear style preset"><i class="fa-solid fa-xmark"></i> Clear</div>
+<button type="button" id="nig_save_char_desc_btn" class="menu_button menu_button_icon nig_small_btn" title="Save visual description and style preset"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+<button type="button" id="nig_reset_char_desc_btn" class="menu_button menu_button_icon nig_small_btn" title="Reset visual description and style preset to defaults"><i class="fa-solid fa-rotate-left"></i> Reset</button>
 </div>
 <div class="nig_collapsible" style="margin-top:10px;">
   <div id="nig_gen_prompt_toggle" class="nig_collapsible_header" style="cursor:pointer;display:flex;align-items:center;">
