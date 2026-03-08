@@ -1198,6 +1198,7 @@ function loadCharacterDescription(entryKey) {
         $('#nig_char_trigger_pattern').val('');
         $('#nig_style_preset_tags').val('');
         $('#nig_style_preset_status').text('');
+        $('#nig_char_desc_status').text('');
         $('#nig_char_trigger_row').show();
         return;
     }
@@ -1223,6 +1224,7 @@ function loadCharacterDescription(entryKey) {
     const preset = settings.char_style_presets?.[entryKey];
     $('#nig_style_preset_tags').val(preset || '');
     $('#nig_style_preset_status').text(preset ? 'Saved \u2713' : '').css('color', '');
+    $('#nig_char_desc_status').text(desc ? 'Saved ✓' : '').css('color', '');
     _charDescDirty = false;
 }
 
@@ -1266,6 +1268,7 @@ function saveCharacterDescription() {
     updateActiveCharactersList();
     _charDescDirty = false;
     $('#nig_style_preset_status').text('Saved ✓').css('color', 'var(--SmartThemeQuoteColor)');
+    $('#nig_char_desc_status').text('Saved ✓').css('color', 'var(--SmartThemeQuoteColor)');
     toastr.success(`Saved description and style preset for ${label}`, 'Pawtrait');
 }
 
@@ -1294,6 +1297,7 @@ function resetCharacterDescription() {
     // Clear style preset UI
     $('#nig_style_preset_tags').val('');
     $('#nig_style_preset_status').text('');
+    $('#nig_char_desc_status').text('');
     _charDescDirty = false;
 
     toastr.info(`Reset description and style preset for ${label}`, 'Pawtrait');
@@ -3711,6 +3715,7 @@ async function generateCharacterAppearance(entryKey, promptOverride = null) {
         // Update UI if this entryKey is currently selected
         if ($('#nig_char_select').val() === entryKey) {
             $('#nig_char_description').val(result.visual_description.trim());
+            $('#nig_char_desc_status').text('Generated ✓').css('color', 'var(--SmartThemeQuoteColor)');
             $('#nig_style_preset_tags').val(result.style_preset.trim());
             $('#nig_style_preset_status').text('Generated ✓').css('color', 'var(--SmartThemeQuoteColor)');
         }
@@ -3734,6 +3739,7 @@ async function generateCharacterAppearance(entryKey, promptOverride = null) {
 
                 if ($('#nig_char_select').val() === entryKey) {
                     $('#nig_char_description').val(result.visual_description.trim());
+                    $('#nig_char_desc_status').text('Generated ✓ (text-only)').css('color', 'var(--SmartThemeQuoteColor)');
                     $('#nig_style_preset_tags').val(result.style_preset.trim());
                     $('#nig_style_preset_status').text('Generated ✓ (text-only)').css('color', 'var(--SmartThemeQuoteColor)');
                 }
@@ -6229,6 +6235,7 @@ jQuery(async () => {
     // Mark dirty + clear status when user edits either field
     $('#nig_char_description').on('input', function() {
         _charDescDirty = true;
+        $('#nig_char_desc_status').text('').css('color', '');
     });
 
     // Style preset — typing clears the "Saved ✓" status so user knows to Save
@@ -6255,6 +6262,7 @@ jQuery(async () => {
         if (btn.hasClass('disabled')) return;
         btn.addClass('disabled').find('i').removeClass('fa-wand-magic-sparkles').addClass('fa-spinner fa-spin');
         $('#nig_style_preset_status').text('Generating…').css('color', '');
+        $('#nig_char_desc_status').text('Generating…').css('color', '');
         try {
             const customPrompt = $('#nig_gen_prompt_body').is(':visible')
                 ? ($('#nig_gen_prompt_textarea').val().trim() || null)
@@ -6267,6 +6275,7 @@ jQuery(async () => {
             }
         } catch (err) {
             $('#nig_style_preset_status').text('Failed').css('color', 'var(--SmartThemeEmColor)');
+            $('#nig_char_desc_status').text('Failed').css('color', 'var(--SmartThemeEmColor)');
             toastr.error(`Generation failed: ${err.message}`, 'Pawtrait');
         } finally {
             btn.removeClass('disabled').find('i').removeClass('fa-spinner fa-spin').addClass('fa-wand-magic-sparkles');
