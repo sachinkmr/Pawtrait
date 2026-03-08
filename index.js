@@ -3551,10 +3551,11 @@ Your task: analyze the **character image** and/or **character card** and output 
 - When an image is provided, it is the **primary visual reference**. Derive appearance from what is directly visible.
 - The character card **fills in details not visible in the image** (e.g., eye color if obscured, clothing details if cropped).
 - If the image is missing, a placeholder, or a default avatar, rely on the card alone.
+- Placeholder and default avatars include: silhouette icons, blank profile images, generic cartoon avatars, or any image that does not depict a specific individual. If the image is one of these, treat it as absent and rely on the card.
 
 **visual_description** — describe only what is directly visible or explicitly stated:
+- subject (e.g., "young woman", "teenage boy")
 - approximate age
-- gender presentation
 - ethnicity / skin tone
 - body build
 - facial structure
@@ -3568,6 +3569,9 @@ Do not guess or hallucinate. Do not use speculative phrases ("likely", "probably
 
 **Format rules for visual_description** based on **target_image_generation_model**:
 - Diffusion model (HiDream, FLUX, Stable Diffusion, Pony, etc.) → **15\u201330 comma-separated tags**. No sentences.
+  - Each tag must be a short descriptive noun phrase (1\u20134 words). No full sentences.
+  - Recommended tag order: subject → age → ethnicity/skin tone → body build → hair → eyes → clothing → pose/vibe.
+  - Tags must describe **visible traits only**. Do not use abstract descriptors like "confident", "professional", "mysterious", "grounded", or "elegant" — these are moods, not visible traits.
 - Language-model generator (DALL-E, GPT-image, Ideogram, etc.) → **2\u20133 natural language sentences**.
 
 **style_preset** — identify the visual rendering style of the character's portrait (or best inference from the card if no image is available). Output **8\u201315 comma-separated tags** covering: art style, rendering medium, lighting, color mood.
@@ -3588,7 +3592,7 @@ Character Data:
 Output ONLY the raw JSON object — no markdown, no code fences, no explanation text before or after.
 
 {
-  "visual_description": "1girl, long black hair, dark brown eyes, warm olive skin, slender build, white crop top, high-waisted jeans",
+  "visual_description": "young woman, mid-20s, warm olive skin tone, slender build, long black hair, dark brown eyes, white crop top, high-waisted jeans",
   "style_preset": "photorealistic, cinematic portrait, soft studio lighting, warm golden tones, shallow depth of field"
 }`;
 }
