@@ -6264,9 +6264,8 @@ jQuery(async () => {
         $('#nig_style_preset_status').text('Generating…').css('color', '');
         $('#nig_char_desc_status').text('Generating…').css('color', '');
         try {
-            const customPrompt = $('#nig_gen_prompt_body').is(':visible')
-                ? ($('#nig_gen_prompt_textarea').val().trim() || null)
-                : null;
+            // Always read the textarea — the user may have edited and collapsed the panel
+            const customPrompt = $('#nig_gen_prompt_textarea').val().trim() || null;
             const result = await generateCharacterAppearance(entryKey, customPrompt);
             if (result) {
                 const label = getEntryDisplayLabel(entryKey);
