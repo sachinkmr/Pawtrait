@@ -5008,7 +5008,11 @@ async function sendImageRequest(settings, requestBody) {
 /**
  * Provider-agnostic chat request helper (used for summarization)
  */
-async function sendChatRequest(settings, body) {
+const CHAT_RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+const CHAT_MAX_RETRIES = 2;
+const CHAT_RETRY_DELAY_MS = 3000;
+
+async function sendChatRequest(settings, body, _retryCount = 0) {
     const providerConfig = getProviderConfig(settings);
     const chatUrl = providerConfig.chatUrl || settings.api_endpoint;
     if (!chatUrl) throw new Error('No chat endpoint configured for selected provider.');
@@ -5052,7 +5056,22 @@ async function sendChatRequest(settings, body) {
             status: response.status,
             errorText,
         });
-        throw new Error(`Chat API Error ${response.status}: ${errorText}`);
+
+        // Retry transient errors with a short delay before giving up
+        if (CHAT_RETRYABLE_STATUSES.has(response.status) && _retryCount < CHAT_MAX_RETRIES) {
+            const attempt = _retryCount + 1;
+            addRuntimeLog('warn', `Chat request failed (${response.status}), retrying in ${CHAT_RETRY_DELAY_MS / 1000}s… (attempt ${attempt}/${CHAT_MAX_RETRIES})`, { chatUrl });
+            await new Promise(r => setTimeout(r, CHAT_RETRY_DELAY_MS));
+            return sendChatRequest(settings, body, attempt);
+        }
+
+        // Extract a human-readable message from the JSON error body when available
+        let friendlyMessage = errorText;
+        try {
+            const parsed = JSON.parse(errorText);
+            if (parsed?.error?.message) friendlyMessage = parsed.error.message;
+        } catch (_) { /* not JSON — use raw text */ }
+        throw new Error(`Chat API Error ${response.status}: ${friendlyMessage}`);
     }
 
     const result = await response.json();
