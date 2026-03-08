@@ -3626,6 +3626,8 @@ Character Data:
 
 **character_image**: {{character_image}}
 
+**target_image_model**: {{image_model}}
+
 Return **only valid JSON**.
 
 {
@@ -3639,8 +3641,9 @@ Return **only valid JSON**.
  * - {{character_card}}  → character name + description + personality + scenario
  * - {{character_image}} → descriptive note about image availability (image is attached as a vision
  *                         message part separately; the note tells the model whether to expect one)
+ * - {{image_model}}     → the image generation model name (so instructions can be tailored to it)
  */
-function resolveAppearanceTemplate(template, entryKey, hasImage = false) {
+function resolveAppearanceTemplate(template, entryKey, hasImage = false, imageModel = '') {
     let cardText = '';
     if (!isPersonaKey(entryKey)) {
         const char = getCharacterByName(entryKey);
@@ -3661,6 +3664,7 @@ function resolveAppearanceTemplate(template, entryKey, hasImage = false) {
     return template
         .replace('{{character_card}}', cardText)
         .replace('{{character_image}}', imageNote)
+        .replace('{{image_model}}', imageModel || 'unspecified')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 }
@@ -3706,7 +3710,8 @@ async function generateCharacterAppearance(entryKey, promptOverride = null) {
         const template = promptOverride || buildCharacterAppearancePromptTemplate();
         const wantsImage = template.includes('{{character_image}}');
         const attachImage = includeImage && wantsImage;
-        const resolvedText = resolveAppearanceTemplate(template, entryKey, attachImage);
+        const imageModel = (extension_settings[extensionName].model || '').trim();
+        const resolvedText = resolveAppearanceTemplate(template, entryKey, attachImage, imageModel);
 
         // The template contains both instructions and character data (as placeholders),
         // so it always goes as the system message. The image (if available) is attached
