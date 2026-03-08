@@ -3596,9 +3596,10 @@ function buildCharacterAppearancePromptTemplate() {
 /**
  * Resolve a prompt template for a given entry:
  * - {{character_card}}  → character name + description + personality + scenario
- * - {{character_image}} → stripped from text (the image is attached as a vision message part separately)
+ * - {{character_image}} → descriptive note about image availability (image is attached as a vision
+ *                         message part separately; the note tells the model whether to expect one)
  */
-function resolveAppearanceTemplate(template, entryKey) {
+function resolveAppearanceTemplate(template, entryKey, hasImage = false) {
     let cardText = '';
     if (!isPersonaKey(entryKey)) {
         const char = getCharacterByName(entryKey);
@@ -3613,9 +3614,12 @@ function resolveAppearanceTemplate(template, entryKey) {
         const desc  = getEffectiveDescriptionForEntry(entryKey);
         cardText = `Persona: ${label}${desc ? '\n\nDescription:\n' + desc : ''}`;
     }
+    const imageNote = hasImage
+        ? '[portrait image attached — refer to the image provided with this request]'
+        : '[no portrait image available — use character card only]';
     return template
         .replace('{{character_card}}', cardText)
-        .replace('{{character_image}}', '')
+        .replace('{{character_image}}', imageNote)
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 }
@@ -3660,7 +3664,8 @@ async function generateCharacterAppearance(entryKey, promptOverride = null) {
     const callGeneration = async (includeImage) => {
         const template = promptOverride || buildCharacterAppearancePromptTemplate();
         const wantsImage = template.includes('{{character_image}}');
-        const resolvedText = resolveAppearanceTemplate(template, entryKey);
+        const attachImage = includeImage && wantsImage;
+        const resolvedText = resolveAppearanceTemplate(template, entryKey, attachImage);
 
         // When the user has supplied a custom prompt, treat it as the system message
         // so their instructions are fully authoritative (no conflict with the built-in prompt).
@@ -3670,12 +3675,12 @@ async function generateCharacterAppearance(entryKey, promptOverride = null) {
         if (promptOverride) {
             messages = [
                 { role: 'system', content: resolvedText },
-                { role: 'user', content: buildUserContent(includeImage && wantsImage, 'Generate the JSON now.') },
+                { role: 'user', content: buildUserContent(attachImage, 'Generate the JSON now.') },
             ];
         } else {
             messages = [
                 { role: 'system', content: CHAR_APPEARANCE_SYSTEM_PROMPT },
-                { role: 'user', content: buildUserContent(includeImage && wantsImage, resolvedText) },
+                { role: 'user', content: buildUserContent(attachImage, resolvedText) },
             ];
         }
 
