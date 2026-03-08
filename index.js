@@ -3624,8 +3624,8 @@ Rules:
 - If a feature is **not clearly visible in the image or described in the card**, **do not include it**.
 - **Do not guess or hallucinate missing features.**
 - **Avoid speculative phrases such as "likely", "probably", or "suggesting".**
-- Write the visual description in **image-generation prompt style** rather than narrative.
 - Keep the description **concise (40\u2013120 words).**
+- Format **visual_description** as **comma-separated tags** if **target_image_model** is a diffusion model (HiDream, FLUX, Stable Diffusion, Pony, etc.), or as a **natural language sentence** if it is a language-model-based generator (DALL-E, GPT-image, Ideogram, etc.).
 
 Also generate a **style preset** describing the visual rendering style (examples: photorealistic, anime, manga, fantasy illustration, comic art, digital painting, 3D render, cinematic lighting).
 
