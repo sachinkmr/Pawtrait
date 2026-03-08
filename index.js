@@ -3527,13 +3527,35 @@ function detectCharactersInText(text) {
 
 // ── Unified character appearance generation ───────────────────────────────────
 
-const CHAR_APPEARANCE_SYSTEM_PROMPT = `You are a visual character analyst for AI image generation.
-Given a character's description and/or portrait image, analyze their appearance and return ONLY valid JSON with exactly two fields:
+const CHAR_APPEARANCE_SYSTEM_PROMPT = `You are a character visual analyzer.
+
+Analyze the provided character image and character card.
+Generate a description suitable for image generation models.
+
+Focus only on visual appearance.
+
+Include:
+- approximate age
+- gender presentation
+- ethnicity / skin tone
+- body type
+- facial structure
+- hair style and color
+- eyes
+- clothing / outfit
+- overall visual vibe
+
+Use the image as the primary source. The character card may clarify details.
+
+Also generate a style preset describing the rendering style.
+It may include styles like: photorealistic, cinematic portrait, anime, manga, fantasy illustration, comic art, digital painting, 3D render, etc., plus lighting or color style.
+
+Return ONLY valid JSON. Do not include any text outside the JSON object. Do not use markdown code fences.
+
 {
-  "visual_description": "A detailed 2-4 sentence description of the character's physical appearance, clothing, hair, eyes, and distinctive features.",
-  "style_preset": "10-15 comma-separated visual style tags covering art style, color palette, lighting, rendering medium, mood, and visual themes."
-}
-Do not include any text outside the JSON object. Do not use markdown code fences.`;
+  "visual_description": "clear image-generation description of the character's physical appearance",
+  "style_preset": "short visual style description"
+}`;
 
 /**
  * Build the user-facing editable prompt text for character appearance generation.
