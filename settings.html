@@ -98,7 +98,8 @@
 <label for="nig_char_select">Select Character</label>
 <div class="nig_input_group">
 <select id="nig_char_select" class="text_pole"><option value="">-- Select a character --</option></select>
-<div id="nig_refresh_chars_btn" class="nig_input_btn" title="Refresh"><i class="fa-solid fa-rotate"></i></div>
+<div id="nig_refresh_chars_btn" class="nig_input_btn" title="Refresh character list"><i class="fa-solid fa-rotate"></i></div>
+<div id="nig_generate_char_appearance_btn" class="nig_input_btn" title="Generate Visual Description &amp; Style Preset via AI — analyzes avatar and description to produce both fields in one call"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
 </div>
 </div>
 <div class="nig_field">
@@ -123,8 +124,18 @@
 <div id="nig_generate_style_preset_btn" class="menu_button menu_button_icon nig_small_btn" title="Generate style preset via AI"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate</div>
 <div id="nig_clear_style_preset_btn" class="menu_button menu_button_icon nig_small_btn nig_danger" title="Clear style preset"><i class="fa-solid fa-xmark"></i> Clear</div>
 </div>
+<div class="nig_collapsible" style="margin-top:10px;">
+  <div id="nig_gen_prompt_toggle" class="nig_collapsible_header" style="cursor:pointer;display:flex;align-items:center;">
+    <i class="fa-solid fa-chevron-right nig_collapsible_chevron" style="transition:transform 150ms;margin-right:6px;"></i>
+    <span>Show / Edit Generation Prompt</span>
+  </div>
+  <div id="nig_gen_prompt_body" style="display:none;margin-top:8px;">
+    <textarea id="nig_gen_prompt_textarea" class="text_pole textarea_compact" rows="8" placeholder="Prompt will be auto-filled when you expand this panel…"></textarea>
+    <small class="nig_hint">Edit the prompt before generating. Applies only to the next generation.</small>
+  </div>
 </div>
-<div class="nig_section">
+</div>
+<div id="nig_char_trigger_row" class="nig_section">
 <div class="nig_section_title"><i class="fa-solid fa-bolt"></i> Per-Character Auto-Generate Trigger</div>
 <small class="nig_hint" style="margin-bottom:8px;display:block;">Override the global auto-generate regex for this character. Leave blank to use the global setting.</small>
 <div class="nig_field">
@@ -132,27 +143,7 @@
 <input type="text" id="nig_char_trigger_pattern" class="text_pole" placeholder="e.g. .*describes.*|.*notices.* (leave blank for global)" />
 </div>
 </div>
-<div class="nig_section">
-<div class="nig_section_title"><i class="fa-solid fa-user-pen"></i> User/Persona Visual Descriptions</div>
-<small class="nig_hint" style="margin-bottom:10px;display:block;">Select a persona to edit their visual description.</small>
-<div class="nig_field">
-<label for="nig_persona_select">Select Persona</label>
-<div class="nig_input_group">
-<select id="nig_persona_select" class="text_pole"><option value="">-- Select a persona --</option></select>
-<div id="nig_refresh_personas_btn" class="nig_input_btn" title="Refresh"><i class="fa-solid fa-rotate"></i></div>
-</div>
-</div>
-<div class="nig_field">
-<label for="nig_persona_description">Visual Description for <span id="nig_persona_name_label">selected persona</span></label>
-<textarea id="nig_persona_description" class="text_pole textarea_compact" rows="5" placeholder="Select a persona..."></textarea>
-<small class="nig_hint">Auto-loaded from persona. Edit and save to override.</small>
-</div>
-<div class="nig_button_row" style="margin-top:8px;">
-<button type="button" id="nig_save_persona_desc_btn" class="menu_button menu_button_icon"><i class="fa-solid fa-floppy-disk"></i><span>Save Custom Description</span></button>
-<button type="button" id="nig_reset_persona_desc_btn" class="menu_button menu_button_icon"><i class="fa-solid fa-rotate-left"></i><span>Reset to Persona</span></button>
-</div>
-<div id="nig_persona_saved_list" class="nig_saved_list"></div>
-</div>
+
 </div>
 
 <div class="nig_tab_content" data-tab="active">
@@ -167,6 +158,18 @@
 </div>
 </div>
 <div id="nig_active_chars_list" class="nig_saved_list"></div>
+<div class="nig_button_row" style="margin-top:8px;">
+  <div id="nig_auto_detect_chars_btn" class="menu_button menu_button_icon nig_small_btn"
+       title="Use AI to detect which characters are active in recent chat messages">
+    <i class="fa-solid fa-sparkles"></i> Auto-detect
+  </div>
+</div>
+<div class="nig_field" style="margin-top:8px;">
+  <label class="checkbox_label">
+    <input type="checkbox" id="nig_auto_detect_active_chars" />
+    <span>Auto-detect before each image generation</span>
+  </label>
+</div>
 </div>
 </div>
 

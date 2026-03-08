@@ -94,9 +94,11 @@ Scene: [2-3 descriptive sentences]
 `,
 
     // Character Description Settings
-    char_descriptions: {}, // { "character_name": "custom_description" }
-    persona_descriptions: {}, // { "persona_key": "custom_description" }
+    char_descriptions: {}, // { "character_name": "custom_description" } — also stores personas as __persona__<key>
+    persona_descriptions: {}, // { "persona_key": "custom_description" } — legacy, kept for migration
     active_characters: [], // ["character_name"]
+    active_characters_auto: [], // auto-detected character names (replaced on each detection run)
+    auto_detect_active_chars: false, // auto-detect active chars before each generation
 
     // Generation Settings
     aspect_ratio: '1:1',
@@ -138,7 +140,7 @@ Scene: [2-3 descriptive sentences]
     prompt_style_override: 'auto', // 'auto' | 'natural' | 'tags' | 'mixed'
 
     // Per-character style presets (LLM Vision)
-    char_style_presets: {}, // { charName: 'tag1, tag2, ...' }
+    char_style_presets: {}, // { charName: 'tag1, tag2, ...' } — also stores personas as __persona__<key>
     style_preset_vision_model: '', // blank = use summarizer_model
 };
 
@@ -630,6 +632,9 @@ async function loadSettings() {
     // Style preset vision model dropdown
     updateVisionModelDropdown(cachedChatModels);
 
+    // Auto-detect active characters toggle
+    $('#nig_auto_detect_active_chars').prop('checked', s.auto_detect_active_chars || false);
+
     // Gallery scope pills
     const scope = s.gallery_scope || 'all';
     $('.nig_gallery_scope_pill').removeClass('active');
@@ -979,6 +984,56 @@ function getCharacterByName(charName) {
     return getAvailableCharacters().find(char => char?.name === charName) || null;
 }
 
+// ── Persona-as-character helpers ──────────────────────────────────────────────
+const PERSONA_ENTRY_PREFIX = '__persona__';
+
+function isPersonaKey(entryKey) {
+    return String(entryKey || '').startsWith(PERSONA_ENTRY_PREFIX);
+}
+
+function personaKeyFromEntry(entryKey) {
+    return String(entryKey || '').slice(PERSONA_ENTRY_PREFIX.length);
+}
+
+function personaEntryKey(personaKey) {
+    return PERSONA_ENTRY_PREFIX + String(personaKey || '');
+}
+
+function getPersonaDisplayName(entryKey) {
+    const key = personaKeyFromEntry(entryKey);
+    return power_user.personas?.[key] || key;
+}
+
+/** Returns a human-readable label for either a persona entry or plain character name. */
+function getEntryDisplayLabel(entryKey) {
+    if (isPersonaKey(entryKey)) return `[You] ${getPersonaDisplayName(entryKey)}`;
+    return entryKey;
+}
+
+/**
+ * Returns the effective visual description for any entry key (character or __persona__<key>).
+ * Priority: char_descriptions[entryKey] → persona card desc → character card desc
+ */
+function getEffectiveDescriptionForEntry(entryKey) {
+    const settings = extension_settings[extensionName];
+    if (settings.char_descriptions?.[entryKey]) {
+        return cleanText(settings.char_descriptions[entryKey]).substring(0, 1000);
+    }
+    if (isPersonaKey(entryKey)) {
+        const pKey = personaKeyFromEntry(entryKey);
+        // legacy custom persona description
+        if (settings.persona_descriptions?.[pKey]) {
+            return cleanText(settings.persona_descriptions[pKey]).substring(0, 1000);
+        }
+        // native ST persona description
+        const nativeDesc = getPersonaDescriptionFromPowerUser(pKey);
+        return nativeDesc ? cleanText(nativeDesc).substring(0, 1000) : '';
+    }
+    const cardDesc = getCharacterCardDescription(entryKey);
+    return cardDesc ? cleanText(cardDesc).substring(0, 1000) : '';
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
 function normalizeCharacterNames(names) {
     if (!Array.isArray(names)) return [];
 
@@ -1017,6 +1072,19 @@ function populateCharacterDropdown() {
             if (char.name) {
                 select.append(`<option value="${char.name}">${char.name}</option>`);
             }
+        }
+    }
+
+    // Add personas as "[You] Name" entries with __persona__ prefix
+    const personas = power_user.personas || {};
+    const sortedPersonaKeys = Object.keys(personas).sort((a, b) =>
+        (personas[a] || a).localeCompare(personas[b] || b));
+    if (sortedPersonaKeys.length > 0) {
+        if (charList.length > 0) select.append('<option disabled>──── You (Personas) ────</option>');
+        for (const key of sortedPersonaKeys) {
+            const displayName = personas[key] || key;
+            const entryKey = personaEntryKey(key);
+            select.append(`<option value="${entryKey}">[You] ${displayName}</option>`);
         }
     }
 
@@ -1116,37 +1184,39 @@ function updateActiveCharactersList() {
 }
 
 /**
- * Load character description - auto-loads from card, shows custom if saved
+ * Load character description - auto-loads from card or persona, shows custom if saved.
+ * entryKey is either a character name or a __persona__<key> string.
  */
-function loadCharacterDescription(charName) {
-    if (!charName) {
+function loadCharacterDescription(entryKey) {
+    if (!entryKey) {
         $('#nig_char_description').val('');
         $('#nig_char_name_label').text('selected character');
         $('#nig_char_trigger_pattern').val('');
         $('#nig_style_preset_tags').val('');
         $('#nig_style_preset_status').text('');
+        $('#nig_char_trigger_row').show();
         return;
     }
 
     const settings = extension_settings[extensionName];
-    $('#nig_char_name_label').text(charName);
+    const isPersona = isPersonaKey(entryKey);
+    $('#nig_char_name_label').text(getEntryDisplayLabel(entryKey));
 
-    // Check if custom description exists
-    const customDesc = settings.char_descriptions?.[charName];
-    if (customDesc) {
-        $('#nig_char_description').val(customDesc);
+    // Load description from unified storage
+    const desc = getEffectiveDescriptionForEntry(entryKey);
+    $('#nig_char_description').val(desc);
+
+    // Trigger pattern only applies to actual characters
+    if (isPersona) {
+        $('#nig_char_trigger_row').hide();
+        $('#nig_char_trigger_pattern').val('');
     } else {
-        // Load from character card
-        const cardDesc = getCharacterCardDescription(charName);
-        const cleaned = cardDesc ? cleanText(cardDesc).substring(0, 1000) : '';
-        $('#nig_char_description').val(cleaned);
+        $('#nig_char_trigger_row').show();
+        $('#nig_char_trigger_pattern').val(settings.char_trigger_patterns?.[entryKey] || '');
     }
 
-    // Load per-char trigger pattern
-    $('#nig_char_trigger_pattern').val(settings.char_trigger_patterns?.[charName] || '');
-
     // Load style preset
-    const preset = settings.char_style_presets?.[charName];
+    const preset = settings.char_style_presets?.[entryKey];
     $('#nig_style_preset_tags').val(preset || '');
     $('#nig_style_preset_status').text(preset ? 'Saved ✓' : '').css('color', '');
 }
@@ -1160,21 +1230,22 @@ function getCharacterCardDescription(charName) {
 }
 
 /**
- * Save character custom description
+ * Save character/persona custom description.
  */
 function saveCharacterDescription() {
-    const charName = $('#nig_char_select').val();
-    if (!charName) return;
+    const entryKey = $('#nig_char_select').val();
+    if (!entryKey) return;
 
     const settings = extension_settings[extensionName];
     if (!settings.char_descriptions) settings.char_descriptions = {};
 
     const desc = $('#nig_char_description').val().trim();
+    const label = getEntryDisplayLabel(entryKey);
     if (desc) {
-        settings.char_descriptions[charName] = desc;
-        toastr.success(`Saved custom description for ${charName}`, 'Pawtrait');
+        settings.char_descriptions[entryKey] = desc;
+        toastr.success(`Saved custom description for ${label}`, 'Pawtrait');
     } else {
-        delete settings.char_descriptions[charName];
+        delete settings.char_descriptions[entryKey];
     }
 
     saveSettingsDebounced();
@@ -1183,25 +1254,27 @@ function saveCharacterDescription() {
 }
 
 /**
- * Reset character description to card default
+ * Reset character/persona description to its card/native default.
  */
 function resetCharacterDescription() {
-    const charName = $('#nig_char_select').val();
-    if (!charName) return;
+    const entryKey = $('#nig_char_select').val();
+    if (!entryKey) return;
 
-    const cardDesc = getCharacterCardDescription(charName);
-    const cleaned = cardDesc ? cleanText(cardDesc).substring(0, 1000) : '';
-    $('#nig_char_description').val(cleaned);
-
-    // Remove custom description
     const settings = extension_settings[extensionName];
-    if (settings.char_descriptions?.[charName]) {
-        delete settings.char_descriptions[charName];
+    const label = getEntryDisplayLabel(entryKey);
+
+    // Remove override so getEffectiveDescriptionForEntry falls back to native source
+    if (settings.char_descriptions?.[entryKey]) {
+        delete settings.char_descriptions[entryKey];
         saveSettingsDebounced();
         updateSavedCharactersList();
         updateActiveCharactersList();
-        toastr.info(`Reset ${charName} to card description`, 'Pawtrait');
+        toastr.info(`Reset ${label} to default description`, 'Pawtrait');
     }
+
+    // Reload from native source
+    const freshDesc = getEffectiveDescriptionForEntry(entryKey);
+    $('#nig_char_description').val(freshDesc);
 }
 
 /**
@@ -1219,16 +1292,17 @@ function updateSavedCharactersList() {
     }
 
     container.append('<small class="nig_hint" style="margin-top: 12px; margin-bottom: 8px; display: block;"><strong>Custom Descriptions:</strong></small>');
-    for (const name of chars.sort()) {
-        const desc = settings.char_descriptions[name];
+    for (const entryKey of chars.sort()) {
+        const desc = settings.char_descriptions[entryKey];
         const shortDesc = desc.length > 50 ? desc.substring(0, 50) + '...' : desc;
+        const label = getEntryDisplayLabel(entryKey);
         container.append(`
-            <div class="nig_saved_item" data-name="${name}">
-                <span class="nig_saved_name">${name}</span>
+            <div class="nig_saved_item" data-name="${entryKey}">
+                <span class="nig_saved_name">${label}</span>
                 <span class="nig_saved_desc">${shortDesc}</span>
                 <div class="nig_saved_actions">
-                    <i class="fa-solid fa-pen nig_edit_char_desc" data-name="${name}" title="Edit"></i>
-                    <i class="fa-solid fa-trash nig_delete_char_desc" data-name="${name}" title="Delete"></i>
+                    <i class="fa-solid fa-pen nig_edit_char_desc" data-name="${entryKey}" title="Edit"></i>
+                    <i class="fa-solid fa-trash nig_delete_char_desc" data-name="${entryKey}" title="Delete"></i>
                 </div>
             </div>
         `);
@@ -2832,6 +2906,32 @@ async function getCharacterAvatarByName(charName) {
     }
 }
 
+/**
+ * Fetch the avatar for any entry key — character name or __persona__<personaKey>.
+ * For personas the key is the avatar filename stored under /User Avatars/.
+ */
+async function getAvatarForEntry(entryKey) {
+    if (!entryKey) return null;
+    if (isPersonaKey(entryKey)) {
+        const pKey = personaKeyFromEntry(entryKey);
+        try {
+            const avatarUrl = getAvatarPath(pKey); // getUserAvatar → returns URL for a given avatar filename
+            if (!avatarUrl) return null;
+            const response = await fetch(avatarUrl);
+            if (!response.ok) return null;
+            const blob = await response.blob();
+            const base64 = await getBase64Async(blob);
+            const parts = base64.split(',');
+            const mimeType = parts[0]?.match(/data:([^;]+)/)?.[1] || 'image/png';
+            return { mimeType, data: parts[1] || base64, name: getPersonaDisplayName(entryKey) };
+        } catch (error) {
+            console.warn(`[${extensionName}] Error fetching persona avatar for ${entryKey}:`, error);
+            return null;
+        }
+    }
+    return getCharacterAvatarByName(entryKey).catch(() => null);
+}
+
 function getRecentMessages(depth, fromMessageId = null) {
     const context = getContext();
     const chat = context.chat;
@@ -3410,6 +3510,141 @@ function detectCharactersInText(text) {
     return found;
 }
 
+// ── Unified character appearance generation ───────────────────────────────────
+
+const CHAR_APPEARANCE_SYSTEM_PROMPT = `You are a visual character analyst for AI image generation.
+Given a character's description and/or portrait image, analyze their appearance and return ONLY valid JSON with exactly two fields:
+{
+  "visual_description": "A detailed 2-4 sentence description of the character's physical appearance, clothing, hair, eyes, and distinctive features.",
+  "style_preset": "10-15 comma-separated visual style tags covering art style, color palette, lighting, rendering medium, mood, and visual themes."
+}
+Do not include any text outside the JSON object. Do not use markdown code fences.`;
+
+/**
+ * Build the user-facing editable prompt text for character appearance generation.
+ * Returns a plain string the user can inspect and modify before sending.
+ */
+async function buildCharacterAppearancePrompt(entryKey) {
+    const displayName = getEntryDisplayLabel(entryKey);
+    const description = getEffectiveDescriptionForEntry(entryKey);
+    const avatarResult = await getAvatarForEntry(entryKey).catch(() => null);
+
+    let lines = [`Character: ${displayName}`];
+    if (description) lines.push(`\nDescription:\n${description}`);
+    if (avatarResult) lines.push('\n[Portrait image attached — used as visual reference]');
+    lines.push('\nAnalyze this character\'s visual appearance and generate their visual_description and style_preset.');
+    return lines.join('');
+}
+
+/**
+ * Unified appearance generation: one API call returning { visual_description, style_preset }.
+ * Stores both in char_descriptions / char_style_presets under entryKey and updates the UI.
+ * Pass promptOverride to use a custom user-edited prompt text.
+ */
+async function generateCharacterAppearance(entryKey, promptOverride = null) {
+    const settings = extension_settings[extensionName];
+    const visionModel = (settings.style_preset_vision_model || '').trim() || settings.summarizer_model;
+
+    if (!getCurrentApiKey()) {
+        toastr.warning('API key required for appearance generation.', 'Pawtrait');
+        return null;
+    }
+
+    const description = getEffectiveDescriptionForEntry(entryKey);
+    const avatarResult = await getAvatarForEntry(entryKey).catch(() => null);
+    const displayName = getEntryDisplayLabel(entryKey);
+
+    if (!description && !avatarResult) {
+        toastr.warning(`No description or avatar found for ${displayName}.`, 'Pawtrait');
+        return null;
+    }
+
+    addRuntimeLog('info', 'Character appearance generation started', {
+        entryKey, visionModel, hasAvatar: !!avatarResult, hasDescription: !!description,
+    });
+
+    const buildUserContent = (includeImage, promptText) => {
+        if (includeImage && avatarResult) {
+            return [
+                { type: 'text', text: promptText },
+                { type: 'image_url', image_url: { url: `data:${avatarResult.mimeType};base64,${avatarResult.data}` } },
+            ];
+        }
+        return promptText;
+    };
+
+    const callGeneration = async (includeImage) => {
+        const userPromptText = promptOverride || await buildCharacterAppearancePrompt(entryKey);
+        const chatBody = {
+            model: visionModel,
+            messages: [
+                { role: 'system', content: CHAR_APPEARANCE_SYSTEM_PROMPT },
+                { role: 'user', content: buildUserContent(includeImage, userPromptText) },
+            ],
+            max_tokens: 600,
+            temperature: 0.3,
+        };
+        addRuntimeLog('debug', 'Character appearance API call', { entryKey, visionModel, includeImage });
+        const resp = await sendChatRequest(settings, chatBody);
+        const raw = resp.choices?.[0]?.message?.content?.trim();
+        if (!raw) throw new Error('No content returned');
+
+        // Parse JSON — strip markdown fences if present
+        const jsonText = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+        const parsed = JSON.parse(jsonText);
+        if (!parsed.visual_description || !parsed.style_preset) throw new Error('Missing required fields in response');
+        return parsed;
+    };
+
+    try {
+        const result = await callGeneration(!!avatarResult);
+
+        if (!settings.char_descriptions) settings.char_descriptions = {};
+        if (!settings.char_style_presets) settings.char_style_presets = {};
+        settings.char_descriptions[entryKey] = result.visual_description.trim();
+        settings.char_style_presets[entryKey] = result.style_preset.trim();
+        saveSettingsDebounced();
+
+        // Update UI if this entryKey is currently selected
+        if ($('#nig_char_select').val() === entryKey) {
+            $('#nig_char_description').val(result.visual_description.trim());
+            $('#nig_style_preset_tags').val(result.style_preset.trim());
+            $('#nig_style_preset_status').text('Generated ✓').css('color', 'var(--SmartThemeQuoteColor)');
+        }
+
+        addRuntimeLog('info', 'Character appearance generated', { entryKey, visionModel });
+        return result;
+    } catch (err) {
+        addRuntimeLog('error', 'Character appearance generation failed', { entryKey, error: err });
+        console.error(`[${extensionName}] Appearance generation failed for ${entryKey}:`, err);
+
+        // Retry without image if we had one
+        if (avatarResult && description) {
+            addRuntimeLog('warn', 'Retrying appearance generation without vision', { entryKey });
+            try {
+                const result = await callGeneration(false);
+                if (!settings.char_descriptions) settings.char_descriptions = {};
+                if (!settings.char_style_presets) settings.char_style_presets = {};
+                settings.char_descriptions[entryKey] = result.visual_description.trim();
+                settings.char_style_presets[entryKey] = result.style_preset.trim();
+                saveSettingsDebounced();
+
+                if ($('#nig_char_select').val() === entryKey) {
+                    $('#nig_char_description').val(result.visual_description.trim());
+                    $('#nig_style_preset_tags').val(result.style_preset.trim());
+                    $('#nig_style_preset_status').text('Generated ✓ (text-only)').css('color', 'var(--SmartThemeQuoteColor)');
+                }
+                toastr.warning('Vision unavailable — appearance generated from description only.', 'Pawtrait');
+                return result;
+            } catch (fallbackErr) {
+                addRuntimeLog('error', 'Appearance generation text-only fallback failed', { entryKey, error: fallbackErr });
+            }
+        }
+        throw err;
+    }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Generate a visual style preset for a character using the vision model.
  * Calls chat completions with the character avatar + description.
@@ -3518,6 +3753,89 @@ function maybeQueueStylePreset(charName) {
         stylePresetQueuedChars.delete(charName); // allow retry next time
         console.warn(`[${extensionName}] Background style preset failed for ${charName}:`, err?.message);
     });
+}
+
+/**
+ * Auto-detect which characters from the known roster are active/present in recent chat.
+ * Merges results into active_characters: auto-detected entries are replaced, manual ones stay.
+ * Returns an array of newly detected character names.
+ */
+async function autoDetectActiveCharacters(silent = false) {
+    const settings = extension_settings[extensionName];
+    const model = settings.summarizer_model;
+
+    if (!getCurrentApiKey()) {
+        if (!silent) toastr.warning('API key required for auto-detection.', 'Pawtrait');
+        return [];
+    }
+    if (!model) {
+        if (!silent) toastr.warning('Set a Summarizer model first.', 'Pawtrait');
+        return [];
+    }
+
+    const context = getContext();
+    const chat = context.chat || [];
+    const recentMessages = chat.slice(-20).filter(m => m?.mes && !m.is_system);
+    if (recentMessages.length === 0) {
+        if (!silent) toastr.info('No recent messages to analyze.', 'Pawtrait');
+        return [];
+    }
+
+    const allChars = getAvailableCharacters().map(c => c.name).filter(Boolean);
+    if (allChars.length === 0) {
+        if (!silent) toastr.info('No characters available.', 'Pawtrait');
+        return [];
+    }
+
+    const chatSnippet = recentMessages
+        .map(m => `${m.name || (m.is_user ? 'User' : 'Character')}: ${String(m.mes).substring(0, 300)}`)
+        .join('\n');
+
+    const userPrompt = `Given the following recent conversation, identify which characters from the provided list are actively present or mentioned.\n\nAvailable characters:\n${allChars.map(n => `- ${n}`).join('\n')}\n\nRecent conversation:\n${chatSnippet}\n\nReturn ONLY a JSON array of character names that are active/present, e.g. ["Alice", "Bob"]. Empty array if none.`;
+
+    addRuntimeLog('info', 'Auto-detecting active characters', { model, charCount: allChars.length });
+
+    try {
+        const resp = await sendChatRequest(settings, {
+            model,
+            messages: [
+                { role: 'system', content: 'You are a helpful assistant. Respond only with a JSON array.' },
+                { role: 'user', content: userPrompt },
+            ],
+            max_tokens: 200,
+            temperature: 0.1,
+        });
+
+        const raw = (resp.choices?.[0]?.message?.content || '').trim();
+        const jsonText = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+        const detected = JSON.parse(jsonText);
+        if (!Array.isArray(detected)) throw new Error('Response is not an array');
+
+        // Filter to only known character names
+        const detectedSet = new Set(detected.map(n => String(n).trim()));
+        const validDetected = allChars.filter(n => detectedSet.has(n));
+
+        // Merge: remove old auto entries, keep manual entries, add new auto entries
+        const prevAuto = new Set(settings.active_characters_auto || []);
+        const manual = (settings.active_characters || []).filter(n => !prevAuto.has(n));
+        const merged = [...new Set([...manual, ...validDetected])];
+
+        settings.active_characters = merged;
+        settings.active_characters_auto = validDetected;
+        saveSettingsDebounced();
+
+        updateActiveCharactersList();
+        populateActiveCharacterDropdown();
+
+        addRuntimeLog('info', 'Auto-detect complete', { detected: validDetected, manual });
+        if (!silent) toastr.success(`Detected ${validDetected.length} active character(s)`, 'Pawtrait');
+        return validDetected;
+    } catch (err) {
+        addRuntimeLog('error', 'Auto-detect active characters failed', { error: err });
+        console.error(`[${extensionName}] Auto-detect failed:`, err);
+        if (!silent) toastr.error(`Auto-detect failed: ${err.message}`, 'Pawtrait');
+        return [];
+    }
 }
 
 /**
@@ -4827,6 +5145,12 @@ function renderGallery() {
 
 async function generateImage() {
     const settings = extension_settings[extensionName];
+
+    // Auto-detect active characters before generating if enabled
+    if (settings.auto_detect_active_chars) {
+        try { await autoDetectActiveCharacters(true); } catch (e) { /* non-fatal */ }
+    }
+
     const recentMessages = getRecentMessages(settings.message_depth || 1);
     addRuntimeLog('info', 'Quick generate requested', {
         depth: settings.message_depth || 1,
@@ -5841,6 +6165,71 @@ jQuery(async () => {
         updateSavedCharactersList();
     });
 
+    // Generate appearance (visual description + style preset) via unified AI call
+    $('#nig_generate_char_appearance_btn').on('click', async function() {
+        const entryKey = $('#nig_char_select').val();
+        if (!entryKey) {
+            toastr.warning('Select a character or persona first.', 'Pawtrait');
+            return;
+        }
+        const btn = $(this);
+        if (btn.hasClass('disabled')) return;
+        btn.addClass('disabled').find('i').removeClass('fa-wand-magic-sparkles').addClass('fa-spinner fa-spin');
+        $('#nig_style_preset_status').text('Generating…').css('color', '');
+        try {
+            const customPrompt = $('#nig_gen_prompt_body').is(':visible')
+                ? ($('#nig_gen_prompt_textarea').val().trim() || null)
+                : null;
+            const result = await generateCharacterAppearance(entryKey, customPrompt);
+            if (result) {
+                const label = getEntryDisplayLabel(entryKey);
+                toastr.success(`Appearance generated for ${label}`, 'Pawtrait');
+                updateSavedCharactersList();
+            }
+        } catch (err) {
+            $('#nig_style_preset_status').text('Failed').css('color', 'var(--SmartThemeEmColor)');
+            toastr.error(`Generation failed: ${err.message}`, 'Pawtrait');
+        } finally {
+            btn.removeClass('disabled').find('i').removeClass('fa-spinner fa-spin').addClass('fa-wand-magic-sparkles');
+        }
+    });
+
+    // Collapsible prompt panel — pre-populate textarea on expand
+    $('#nig_gen_prompt_toggle').on('click', async function() {
+        const body = $('#nig_gen_prompt_body');
+        const chevron = $(this).find('.nig_collapsible_chevron');
+        if (body.is(':visible')) {
+            body.slideUp(150);
+            chevron.css('transform', '');
+        } else {
+            const entryKey = $('#nig_char_select').val();
+            if (entryKey) {
+                const promptText = await buildCharacterAppearancePrompt(entryKey);
+                $('#nig_gen_prompt_textarea').val(promptText);
+            }
+            body.slideDown(150);
+            chevron.css('transform', 'rotate(90deg)');
+        }
+    });
+
+    // Auto-detect active characters button
+    $('#nig_auto_detect_chars_btn').on('click', async function() {
+        const btn = $(this);
+        if (btn.hasClass('disabled')) return;
+        btn.addClass('disabled').find('i').removeClass('fa-sparkles').addClass('fa-spinner fa-spin');
+        try {
+            await autoDetectActiveCharacters(false);
+        } finally {
+            btn.removeClass('disabled').find('i').removeClass('fa-spinner fa-spin').addClass('fa-sparkles');
+        }
+    });
+
+    // Auto-detect before each generation toggle
+    $('#nig_auto_detect_active_chars').on('change', function() {
+        extension_settings[extensionName].auto_detect_active_chars = $(this).prop('checked');
+        saveSettingsDebounced();
+    });
+
     $('#nig_add_active_char_btn').on('click', function() {
         const selectedName = $('#nig_active_char_select').val();
         if (!selectedName) {
@@ -5861,32 +6250,33 @@ jQuery(async () => {
         toastr.info(`Removed ${name} from active characters`, 'Pawtrait');
     });
 
-    // Edit character description from saved list
+    // Edit character/persona description from saved list
     $(document).on('click', '.nig_edit_char_desc', function() {
-        const name = $(this).data('name');
-        if (name) {
-            $('#nig_char_select').val(name);
-            loadCharacterDescription(name);
+        const entryKey = $(this).data('name');
+        if (entryKey) {
+            $('#nig_char_select').val(entryKey);
+            loadCharacterDescription(entryKey);
             // Scroll to top of Characters tab
             $('.nig_tab_content[data-tab="characters"]').scrollTop(0);
         }
     });
 
-    // Delete character description
+    // Delete character/persona description
     $(document).on('click', '.nig_delete_char_desc', function() {
-        const name = $(this).data('name');
-        if (name && confirm(`Delete custom description for "${name}"?`)) {
-            delete extension_settings[extensionName].char_descriptions[name];
+        const entryKey = $(this).data('name');
+        const label = getEntryDisplayLabel(entryKey);
+        if (entryKey && confirm(`Delete custom description for "${label}"?`)) {
+            delete extension_settings[extensionName].char_descriptions[entryKey];
             saveSettingsDebounced();
             updateSavedCharactersList();
             updateActiveCharactersList();
 
             // Reload if this was the selected character
-            if ($('#nig_char_select').val() === name) {
-                loadCharacterDescription(name);
+            if ($('#nig_char_select').val() === entryKey) {
+                loadCharacterDescription(entryKey);
             }
 
-            toastr.info(`Deleted custom description for ${name}`, 'Pawtrait');
+            toastr.info(`Deleted custom description for ${label}`, 'Pawtrait');
         }
     });
 

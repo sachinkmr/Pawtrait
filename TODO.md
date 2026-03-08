@@ -1,5 +1,6 @@
 # Pawtrait TODO — Feature Expansion
 
+> ✅ All v1.1.0 features implemented and shipped on the `sachin` branch.
 > Implementation order: Phase 1 → 2 → 3 → 4. Each phase is self-contained.
 > All changes are backward-compatible; new settings have safe defaults.
 
@@ -7,154 +8,205 @@
 
 ## Phase 1 — Quick Wins
 
-### 1.1 Negative Prompt
-- [ ] `index.js` — add `negative_prompt: ''` to `defaultSettings`
-- [ ] `index.js` — `generateImageFromPrompt()`: append `requestBody.negative_prompt` if set
-- [ ] `index.js` — `generateImageWithOptions()`: same
-- [ ] `settings.html` — Generation → Image Settings: add textarea `#nig_negative_prompt`
-- [ ] `index.js` — wire `#nig_negative_prompt` input → `saveSettingsDebounced()`
-- [ ] `index.js` — populate `#nig_negative_prompt` in `loadSettingsUI()`
+### 1.1 Negative Prompt ✅
+- [x] `index.js` — add `negative_prompt: ''` to `defaultSettings`
+- [x] `index.js` — `generateImageFromPrompt()`: append `requestBody.negative_prompt` if set
+- [x] `index.js` — `generateImageWithOptions()`: same
+- [x] `settings.html` — Generation → Image Settings: add textarea `#nig_negative_prompt`
+- [x] `index.js` — wire `#nig_negative_prompt` input → `saveSettingsDebounced()`
+- [x] `index.js` — populate `#nig_negative_prompt` in `loadSettings()`
 
-### 1.2 Configurable Seed
-- [ ] `index.js` — add `seed: null`, `seed_locked: false` to `defaultSettings`
-- [ ] `index.js` — `generateImageFromPrompt()`: if `seed_locked && seed != null` → `requestBody.seed = seed`
-- [ ] `index.js` — `generateImageWithOptions()`: same
-- [ ] `settings.html` — Image Settings: number input `#nig_seed` + lock toggle button `#nig_seed_lock`
-- [ ] `index.js` — lock toggle flips `settings.seed_locked`; input updates `settings.seed`
-- [ ] `index.js` — populate both in `loadSettingsUI()`
-- [ ] `style.css` — style the seed row (input + button side-by-side)
+### 1.2 Configurable Seed ✅
+- [x] `index.js` — add `seed: null`, `seed_locked: false` to `defaultSettings`
+- [x] `index.js` — `generateImageFromPrompt()`: if `seed_locked && seed != null` → `requestBody.seed = seed`
+- [x] `index.js` — `generateImageWithOptions()`: same
+- [x] `settings.html` — Image Settings: number input `#nig_seed` + lock checkbox `#nig_seed_locked` + randomize button `#nig_randomize_seed`
+- [x] `index.js` — lock/randomize handlers wire to settings + `saveSettingsDebounced()`
+- [x] `index.js` — populate both in `loadSettings()`
+- [x] `style.css` — inline seed row styles
 
-### 1.3 Inline Prompt Editing Before Generation
-- [ ] `index.js` — add `edit_before_generate: false` to `defaultSettings`
-- [ ] `index.js` — new `async function showEditAndGenerateModal(promptText, imageDataUrls)`:
-  - Renders overlay modal (reuse `.nig_error_overlay` pattern)
-  - Shows assembled prompt in editable textarea (6+ rows, full width)
-  - Shows reference image thumbnails (avatars, previous image)
-  - Buttons: Generate, Cancel
-  - Resolves with `{ prompt, cancelled }` via Promise
-- [ ] `index.js` — `generateImage()` (quick btn): if `edit_before_generate` → assemble prompt + collect imageDataUrls first → open modal → call `generateImageWithOptions()` with edited text
-- [ ] `index.js` — `nigMessageButton()` (paw btn): same branch
-- [ ] `settings.html` — Generation → Quick Generate section: checkbox `#nig_edit_before_generate`
-- [ ] `index.js` — wire + populate in `loadSettingsUI()`
-- [ ] `style.css` — `.nig_edit_modal` textarea (full-width, min-height 130px), thumbnail strip
+### 1.3 Inline Prompt Editing Before Generation ✅
+- [x] `index.js` — add `edit_before_generate: false` to `defaultSettings`
+- [x] `index.js` — reused existing `showEditGeneratePopup(messageId)` for edit-before-generate flow (full Edit & Generate popup with summarize, avatar refs, reset)
+- [x] `index.js` — `generateImage()` (quick btn): if `edit_before_generate` → derive latest messageId → open `showEditGeneratePopup()`
+- [x] `index.js` — `nigMessageButton()` (paw btn): if `edit_before_generate` → open popup instead of direct generate
+- [x] `settings.html` — Generation → Prompt Settings section: checkbox `#nig_edit_before_generate`
+- [x] `index.js` — wire + populate in `loadSettings()`
 
 ---
 
 ## Phase 2 — Gallery Enhancement
 
-### 2.1 Chat-Scoped Gallery
-- [ ] `index.js` — `addToGallery()`: tag new items with `chatId: getContext().chatId`
-- [ ] `settings.html` — Gallery tab: add pill/toggle row "📁 All Chats / This Chat" (`#nig_gallery_scope_all`, `#nig_gallery_scope_current`)
-- [ ] `index.js` — `renderGallery()`: read scope toggle; filter by `chatId === getContext().chatId` when "This Chat" is active
-- [ ] `index.js` — `addToGallery()` / gallery header: show item count for current scope
-- [ ] `style.css` — pill toggle styling for gallery scope
+### 2.1 Chat-Scoped Gallery ✅
+- [x] `index.js` — `addToGallery()`: tag new items with `chatId: getContext().chatId`
+- [x] `settings.html` — Gallery tab: pill toggle row `.nig_gallery_scope_pill` with `data-scope="all"` / `data-scope="chat"`
+- [x] `index.js` — `renderGallery()`: filters gallery by `chatId` when scope is `'chat'`; uses `origIndex` to keep correct delete/view indices
+- [x] `index.js` — re-renders gallery on `CHAT_CHANGED` event
+- [x] `style.css` — `.nig_gallery_scope_row` and `.nig_gallery_scope_pill` styles
 
 ---
 
 ## Phase 3 — Generation Logic
 
-### 3.1 Auto-Generate on Regex Trigger
-- [ ] `index.js` — add to `defaultSettings`:
-  - `auto_generate_enabled: false`
-  - `auto_generate_regex: ''`
-  - `auto_generate_cooldown_secs: 30`
-  - `auto_generate_user_messages: false`
-  - `char_trigger_patterns: {}` (charName → regex string override, `''` = use global)
-- [ ] `index.js` — module-level: `const autoGeneratedMessages = new Set();` and `let lastAutoGenerateAt = 0;`
-- [ ] `index.js` — new `async function tryAutoGenerateForMessage(messageId)`:
-  1. Guard: `auto_generate_enabled` must be true
-  2. Guard: `autoGeneratedMessages.has(messageId)` → skip
-  3. Guard: `(Date.now() - lastAutoGenerateAt) / 1000 < auto_generate_cooldown_secs` → skip
-  4. Get message from `context.chat[messageId]`; if `is_user && !auto_generate_user_messages` → skip
-  5. Resolve pattern: `char_trigger_patterns[charName]` → fallback `auto_generate_regex`; if blank → skip
-  6. `new RegExp(pattern, 'i').test(message.mes)` → if no match → skip
-  7. `autoGeneratedMessages.add(messageId); lastAutoGenerateAt = Date.now();`
-  8. Call `generateImageFromPrompt(message.mes, charName, messageId)` → `appendMediaToMessage()` + `addToGallery()`
-  9. Log success/failure to runtime log
-- [ ] `index.js` — hook: in `eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, ...)` → call `tryAutoGenerateForMessage(messageId)`
-- [ ] `index.js` — hook: in `eventSource.on(event_types.MESSAGE_RENDERED, ...)` for user messages when `auto_generate_user_messages` is enabled
-- [ ] `settings.html` — Generation tab: new Section "Auto-Generate":
-  - Checkbox `#nig_auto_generate_enabled`
-  - Textarea `#nig_auto_generate_regex` (placeholder: `\*[^*]+\*` for action text)
-  - Number input `#nig_auto_generate_cooldown_secs` (label: "Min seconds between triggers")
-  - Checkbox `#nig_auto_generate_user_messages` (label: "Also trigger on user messages")
-  - Hint text explaining regex syntax with examples
-- [ ] `settings.html` — Characters tab: add "Trigger Pattern Override" textarea `#nig_char_trigger_pattern` (appears below description for selected character)
-- [ ] `index.js` — Characters tab: save/load `char_trigger_patterns[charName]` per-character
-- [ ] `index.js` — populate all in `loadSettingsUI()`
+### 3.1 Auto-Generate on Regex Trigger ✅
+- [x] `index.js` — added `auto_generate_enabled`, `auto_generate_regex`, `auto_generate_cooldown_secs`, `auto_generate_user_messages`, `char_trigger_patterns` to `defaultSettings`
+- [x] `index.js` — module-level: `autoGeneratedMessages = new Set()`, `lastAutoGenerateAt = 0`
+- [x] `index.js` — `tryAutoGenerateForMessage(messageId)`: full guard chain + regex + `appendMediaToMessage` + gallery
+- [x] `index.js` — hooked into `CHARACTER_MESSAGE_RENDERED` and `MESSAGE_RENDERED` event listeners
+- [x] `settings.html` — Auto-Generate section with enable toggle, user-msg toggle, regex field, cooldown input
+- [x] `settings.html` — Characters tab: `#nig_char_trigger_pattern` input per character
+- [x] `index.js` — Characters tab: save/load trigger pattern on `#nig_char_select` change
+- [x] `index.js` — populate all in `loadSettings()`
 
-### 3.2 Scene-Aware img2img Character References
-- [ ] `index.js` — add `use_scene_char_refs: false` to `defaultSettings`
-- [ ] `index.js` — new `function detectCharactersInText(text)`:
-  - Get `getAvailableCharacters()` names
-  - For each name, test `text.toLowerCase().includes(name.toLowerCase())`
-  - Return matched names array (no LLM call)
-- [ ] `index.js` — `generateImageFromPrompt()`: if `use_scene_char_refs` → detect chars in `rawContent` → for each found name, `await getCharacterAvatarByName(name)` → push to `imageDataUrls` (dedup by name)
-- [ ] `settings.html` — Reference Images section: new checkbox `#nig_use_scene_char_refs` (label: "Auto-include avatars of characters mentioned in scene")
-- [ ] `index.js` — wire + populate in `loadSettingsUI()`
+### 3.2 Scene-Aware img2img Character References ✅
+- [x] `index.js` — added `use_scene_char_refs: false` to `defaultSettings`
+- [x] `index.js` — `detectCharactersInText(text)`: uses `getContext().characters` for name matching (no LLM)
+- [x] `index.js` — `generateImageFromPrompt()`: detects chars in recent messages → fetches + deduplicates avatars into `imageDataUrls`
+- [x] `settings.html` — Reference Images section: checkbox `#nig_use_scene_char_refs`
+- [x] `index.js` — wire + populate in `loadSettings()`
 
-### 3.3 Model-Aware Rich Context Prompt
-- [ ] `index.js` — add `prompt_style_override: 'auto'` to `defaultSettings`
-- [ ] `index.js` — new `function getPromptStyleForModel(modelId)` → returns `'tags'` | `'natural'` | `'mixed'`:
-  - `'tags'`: flux / sdxl / hidream / z-image / qwen-image / ideogram / recraft / seedream
-  - `'natural'`: gpt-image / dall-e / gemini-image / gpt-5 / gpt-4o-image
-  - `'mixed'`: (default)
-- [ ] `index.js` — `getRecentMessages()` (or new wrapper): add `name` prefix to each message text returned (`"CharName: [text]"`) so summarizer knows who is speaking
-- [ ] `index.js` — `buildPromptText()` (auto-summarize path):
-  - Compute effective style: `settings.prompt_style_override === 'auto' ? getPromptStyleForModel(settings.model) : settings.prompt_style_override`
-  - Substitute into summarizer system prompt: replace `{{PROMPT_STYLE}}` placeholder with style-specific format instructions
-  - Pass attributed messages (speaker-prefixed) to summarizer
-- [ ] `index.js` — update `defaultSettings.summarizer_system_prompt_template` to include `{{PROMPT_STYLE}}` placeholder and example instruction block
-- [ ] `settings.html` — Prompt Settings: add select `#nig_prompt_style_override` (Auto / Natural Language / Tag-Based / Mixed)
-- [ ] `settings.html` — update summarizer hint to mention `{{PROMPT_STYLE}}` placeholder
-- [ ] `index.js` — wire + populate in `loadSettingsUI()`
+### 3.3 Model-Aware Rich Context Prompt ✅
+- [x] `index.js` — added `prompt_style_override: 'auto'` to `defaultSettings`
+- [x] `index.js` — `getPromptStyleForModel(modelId)`: pattern-matches model name → `'tags'` / `'natural'` / `'mixed'`
+- [x] `index.js` — `getPromptStyleInstructions(style)`: returns format guidance string per style
+- [x] `index.js` — `summarizeWithAI()`: computes `finalSystemPrompt` by injecting style instructions via `{{PROMPT_STYLE}}` placeholder or appending if absent
+- [x] `settings.html` — Prompt Settings: select `#nig_prompt_style_override`
+- [x] `index.js` — wire + populate in `loadSettings()`
 
 ---
 
 ## Phase 4 — LLM Vision: Per-Character Style Presets
 
-### 4.1 Preset Storage & UI
-- [ ] `index.js` — add to `defaultSettings`:
-  - `char_style_presets: {}` (charName → style tag string)
-  - `style_preset_vision_model: ''` (blank = use summarizer model, warn if no vision)
-- [ ] `settings.html` — Characters tab: below description section, add "Style Preset" subsection:
-  - Label + textarea `#nig_char_style_preset` (editable, 3 rows)
-  - Hint: "Auto-generated visual style tags. Edit manually to override."
-  - Button row: `#nig_generate_style_preset_btn` ("Generate via Vision"), `#nig_clear_style_preset_btn` ("Clear")
-  - Inline status span `#nig_style_preset_status`
-- [ ] `settings.html` — Connection/Summarizer section: add Vision Model dropdown `#nig_style_preset_vision_model` + refresh button (same pattern as summarizer model)
-- [ ] `index.js` — save/load `char_style_presets[charName]` when character is selected in Characters tab
-- [ ] `index.js` — populate `#nig_style_preset_vision_model` in `loadSettingsUI()`
+### 4.1 Preset Storage & UI ✅
+- [x] `index.js` — added `char_style_presets: {}`, `style_preset_vision_model: ''` to `defaultSettings`
+- [x] `settings.html` — Characters tab: Style Preset section with `#nig_style_preset_tags` textarea, `#nig_generate_style_preset_btn`, `#nig_clear_style_preset_btn`, `#nig_style_preset_status` span
+- [x] `settings.html` — Connection/Summarizer section: text input `#nig_style_preset_vision_model`
+- [x] `index.js` — `loadCharacterDescription()` extended to also load trigger pattern + style preset
+- [x] `index.js` — populate `#nig_style_preset_vision_model` in `loadSettings()`
 
-### 4.2 `generateStylePreset(charName)` Function
-- [ ] `index.js` — new `async function generateStylePreset(charName)`:
-  1. Fetch avatar via `getCharacterAvatarByName(charName)` → base64 data URL
-  2. Fetch card description via `getEffectiveCharacterDescriptionByName(charName)`
-  3. Resolve vision model: `settings.style_preset_vision_model || settings.summarizer_model`
-  4. Build chat completions request (POST to summarizer endpoint):
-     - System: `"You are a visual style analyzer for AI image generation. Given a character's appearance description and portrait image, output exactly 10-15 comma-separated visual style tags covering: art style, color palette, lighting, rendering medium, mood. Output tags only — no explanations, no sentences."`
-     - User message: description text + (if avatar available) image as base64 data URL in OpenAI vision format
-  5. If no avatar and no description → warn user, return
-  6. Parse response → clean tag string → save to `settings.char_style_presets[charName]`
-  7. Update `#nig_char_style_preset` textarea and `#nig_style_preset_status`
-- [ ] `index.js` — wire `#nig_generate_style_preset_btn` → calls `generateStylePreset(charName)` with loading state
-- [ ] `index.js` — wire `#nig_clear_style_preset_btn` → clears `char_style_presets[charName]`, clears textarea
+### 4.2 `generateStylePreset(charName)` Function ✅
+- [x] `index.js` — `generateStylePreset(charName)`: vision call (avatar + description) → tag string; text-only fallback if no avatar; catches error and retries without image
+- [x] `index.js` — `#nig_generate_style_preset_btn` handler with loading spinner state
+- [x] `index.js` — `#nig_clear_style_preset_btn` clears preset + status span
 
-### 4.3 Lazy Auto-Generation of Presets
-- [ ] `index.js` — module-level: `const stylePresetQueuedChars = new Set();`
-- [ ] `index.js` — new `function maybeQueueStylePreset(charName)`:
-  - If `charName` in `stylePresetQueuedChars` → skip
-  - If `char_style_presets[charName]` already exists → skip
-  - If API key not set → skip
-  - Add to `stylePresetQueuedChars`, call `generateStylePreset(charName)` async (fire-and-forget)
-- [ ] `index.js` — hook into `CHARACTER_PAGE_LOADED` listener: call `maybeQueueStylePreset(context.name2)`
-- [ ] `index.js` — hook into `CHARACTER_MESSAGE_RENDERED` listener: same call
+### 4.3 Lazy Auto-Generation of Presets ✅
+- [x] `index.js` — `stylePresetQueuedChars = new Set()` module-level guard
+- [x] `index.js` — `maybeQueueStylePreset(charName)`: skips if already queued, preset exists, or no API key
+- [x] `index.js` — hooked into `CHARACTER_PAGE_LOADED` and `CHARACTER_MESSAGE_RENDERED` listeners
 
-### 4.4 Inject Preset into Prompt
-- [ ] `index.js` — `buildPromptText()` (both auto-summarize and manual paths):
-  - After `system_instruction`, check `settings.char_style_presets[charName]`
-  - If present, append preset tags to style prefix before scene text
-- [ ] Test that preset tags appear in runtime log "Prompt built" entry
+### 4.4 Inject Preset into Prompt ✅
+- [x] `index.js` — `buildPromptText()` manual path: injects `Style: <preset>` after `system_instruction`
+- [x] `index.js` — `buildPromptText()` auto-summarize path: injects preset into `finalPrompt` before summary
+- [x] Preset tags visible in runtime log "Prompt built" entry
+
+---
+
+## Phase 5 — Unified Character Appearance & Persona Integration (v1.2.0)
+
+> **Design goal**: collapse the separate "Visual Description" + "Style Preset" generation steps into
+> a single AI call that returns both fields, and allow user personas to be managed alongside
+> characters in the same dropdown without a duplicate UI section.
+
+### 5.1 Vision Model Dropdown ✅ (commit `14eecc7`)
+- [x] `settings.html` — replaced `#nig_style_preset_vision_model` text input with `<select>`
+- [x] `index.js` — `buildVisionCandidates()` builds candidate list from cached chat models
+- [x] `index.js` — `updateVisionModelDropdown()` repopulates select on model fetch; preserves saved value
+
+### 5.2 Personas in Character Dropdown ✅
+> **Key design decision**: personas are stored with key prefix `__persona__<avatarFilename>`.
+> The same `char_descriptions` / `char_style_presets` maps used for characters also hold persona
+> data under this prefixed key — no separate storage object needed.
+
+- [x] `index.js` — `PERSONA_ENTRY_PREFIX = '__persona__'`
+- [x] `index.js` — helper functions: `isPersonaKey()`, `personaKeyFromEntry()`, `personaEntryKey()`,
+      `getPersonaDisplayName()`, `getEntryDisplayLabel()` (returns `[You] Name` for personas)
+- [x] `index.js` — `getEffectiveDescriptionForEntry(entryKey)` — unified description lookup:
+      `char_descriptions[key]` → `power_user.persona_descriptions[key]` → character card
+- [x] `index.js` — `getAvatarForEntry(entryKey)` — uses `getAvatarPath()` for personas, `getCharacterAvatarByName()` for chars
+- [x] `index.js` — `populateCharacterDropdown()` — appends optgroup `──── You (Personas) ────`
+      with all entries from `power_user.personas`
+- [x] `index.js` — `loadCharacterDescription(entryKey)` — unified for chars + personas;
+      hides `#nig_char_trigger_row` for personas
+- [x] `index.js` — `saveCharacterDescription()` / `resetCharacterDescription()` use `entryKey` key
+- [x] `index.js` — `updateSavedCharactersList()` shows `[You]` prefix via `getEntryDisplayLabel()`
+- [x] `index.js` — edit/delete handlers in saved list use `entryKey` + `getEntryDisplayLabel()`
+- [ ] `settings.html` — remove the entire "User/Persona Visual Descriptions" section (~10 lines)
+      (`#nig_persona_select`, `#nig_persona_description`, save/reset buttons, `#nig_persona_saved_list`)
+- [ ] `settings.html` — add `id="nig_char_trigger_row"` to the Per-Character trigger `<div class="nig_section">`
+      (needed so `loadCharacterDescription` can show/hide it for personas)
+
+### 5.3 Collapsible Prompt Editor (before Unified Generation) ✅ / UI pending
+> Edit the generation prompt before sending; panel pre-populates when expanded.
+
+- [x] `index.js` — `CHAR_APPEARANCE_SYSTEM_PROMPT` constant
+- [x] `index.js` — `buildCharacterAppearancePrompt(entryKey)` — assembles the user prompt text:
+      char name + description + `[Portrait image attached]` note
+- [x] `index.js` — `#nig_gen_prompt_toggle` click handler: `slideDown`/`slideUp` with chevron rotation;
+      calls `buildCharacterAppearancePrompt` to pre-fill textarea on expand
+- [ ] `settings.html` — collapsible panel below Style Preset button row:
+  ```html
+  <div class="nig_collapsible" style="margin-top:10px;">
+    <div id="nig_gen_prompt_toggle" class="nig_collapsible_header">
+      <i class="fa-solid fa-chevron-right nig_collapsible_chevron" style="transition:transform 150ms;margin-right:6px;"></i>
+      <span>Show / Edit Generation Prompt</span>
+    </div>
+    <div id="nig_gen_prompt_body" style="display:none;margin-top:8px;">
+      <textarea id="nig_gen_prompt_textarea" class="text_pole textarea_compact" rows="8"
+        placeholder="Prompt will be auto-filled when you expand this panel…"></textarea>
+      <small class="nig_hint">Edit the prompt before generating. Applies only to the next generation.</small>
+    </div>
+  </div>
+  ```
+
+### 5.4 Unified Character Appearance Generation ✅ / UI pending
+> One button, one API call → returns `{ visual_description, style_preset }`, stores both.
+
+- [x] `index.js` — `generateCharacterAppearance(entryKey, promptOverride)`:
+      - builds image data URL via `getAvatarForEntry()`
+      - single LLM/vision call with `CHAR_APPEARANCE_SYSTEM_PROMPT`
+      - parses JSON response `{ visual_description, style_preset }`
+      - stores `char_descriptions[entryKey]` and `char_style_presets[entryKey]`
+      - updates `#nig_char_description` + `#nig_style_preset_tags` UI if character is selected
+      - retries without image on vision failure
+- [x] `index.js` — `#nig_generate_char_appearance_btn` click handler (spinner, error handling)
+- [ ] `settings.html` — add wand-magic icon button next to `#nig_refresh_chars_btn`:
+  ```html
+  <div id="nig_generate_char_appearance_btn" class="nig_input_btn"
+       title="Generate Visual Description &amp; Style Preset via AI — analyzes avatar and description to produce both fields in one call">
+    <i class="fa-solid fa-wand-magic-sparkles"></i>
+  </div>
+  ```
+
+### 5.5 Auto-Detect Active Characters ✅ / UI pending
+> LLM scans recent 20 messages → JSON array of character names → merges with manual list.
+> **Merge strategy**: auto-detected entries replace the previous auto set; manually-added entries
+> that were NOT in the previous auto set are preserved.
+
+- [x] `index.js` — `active_characters_auto: []`, `auto_detect_active_chars: false` in `defaultSettings`
+- [x] `index.js` — `autoDetectActiveCharacters(silent)`:
+      - scans last 20 messages with a text-only LLM call (no vision needed)
+      - parses response into `validDetected` (cross-checked against `getContext().characters`)
+      - merge: `active_characters = [...manual_preserved, ...validDetected]`
+      - saves settings + calls `updateActiveCharactersList()` + `populateActiveCharacterDropdown()`
+- [x] `index.js` — hooked into `generateImage()`: if `auto_detect_active_chars`, runs silently before generation
+- [x] `index.js` — `#nig_auto_detect_chars_btn` click handler (spinner)
+- [x] `index.js` — `#nig_auto_detect_active_chars` change handler (saves setting)
+- [ ] `loadSettings()` — add `$('#nig_auto_detect_active_chars').prop('checked', s.auto_detect_active_chars || false)`
+- [ ] `settings.html` — Active Characters tab: add below the `nig_saved_list`:
+  ```html
+  <div class="nig_button_row" style="margin-top:8px;">
+    <div id="nig_auto_detect_chars_btn" class="menu_button menu_button_icon nig_small_btn"
+         title="Use AI to detect which characters are active in recent chat messages">
+      <i class="fa-solid fa-sparkles"></i> Auto-detect
+    </div>
+  </div>
+  <div class="nig_field" style="margin-top:8px;">
+    <label class="checkbox_label">
+      <input type="checkbox" id="nig_auto_detect_active_chars" />
+      <span>Auto-detect before each image generation</span>
+    </label>
+  </div>
+  ```
 
 ---
 
@@ -162,21 +214,59 @@
 
 - [ ] 1.1 — Runtime log shows `negative_prompt` in request payload
 - [ ] 1.2 — Seed locked: two identical generations; seed unlocked: different outputs
-- [ ] 1.3 — Paw button opens modal with prompt text + reference image thumbnails; edited text is what gets sent
+- [ ] 1.3 — Paw button with `edit_before_generate` opens Edit & Generate popup; edited text is what gets sent
 - [ ] 2.1 — Generate in 2 chats; "This Chat" filter shows only correct chat images
 - [ ] 3.1 — Pattern `\*[^*]+\*` fires on `*looks at you*`; same message doesn't double-fire on re-render
 - [ ] 3.1 — Cooldown: rapid AI messages only trigger once per N seconds
 - [ ] 3.1 — Per-character override pattern fires for that character; global pattern fires for others
 - [ ] 3.2 — Group chat with 2 named characters: runtime log shows 2 scene-detected avatars in reference image list
 - [ ] 3.3 — `hidream` model → prompt logged as tag-style; `gpt-image-1` → natural language style
-- [ ] 3.3 — Multi-message context has speaker attribution (`CharName: ...`) visible in summarizer logs
-- [ ] 4.1 — "Generate via Vision" button fills style preset textarea with comma-separated tags
-- [ ] 4.2 — With deepseek-chat (no vision): falls back to description-only, status shows warning
+- [ ] 4.1 — "Generate" button fills style preset textarea with comma-separated tags
+- [ ] 4.2 — With deepseek-chat (no vision): falls back to description-only
 - [ ] 4.3 — Fresh chat with new character: preset auto-generates in background within 30s
 - [ ] 4.4 — Runtime log "Prompt built" includes preset tags when preset is set
+- [ ] 5.2 — Personas appear as `[You] Name` in character dropdown; saving a description stores under `__persona__<key>` prefix
+- [ ] 5.2 — Trigger row hidden when a persona is selected, shown when switching back to a character
+- [ ] 5.3 — Expanding the prompt panel auto-populates textarea with the built prompt; editing and generating uses the edited text
+- [ ] 5.4 — Wand button generates both `#nig_char_description` and `#nig_style_preset_tags` in one call
+- [ ] 5.4 — With no vision model: falls back to description-only (no avatar image)
+- [ ] 5.5 — Clicking "Auto-detect" in Active tab adds detected characters to the list
+- [ ] 5.5 — Enabling "Auto-detect before each generation" runs detection silently before each image
+
+---
+
+## Code Organisation Notes
+
+> `index.js` is ~6 600 lines and growing. Because the file uses ES module `import` syntax,
+> local sub-module files are natively supported by the browser module loader used by SillyTavern.
+> Plan for v1.3.0 or a dedicated refactor PR:
+
+```
+Pawtrait/
+├── index.js              ← entry, event wiring, loadSettings, generateImage
+├── settings.html
+├── style.css
+└── modules/
+    ├── persona.js         ← PERSONA_ENTRY_PREFIX, isPersonaKey, getEntryDisplayLabel,
+    │                         getEffectiveDescriptionForEntry, getAvatarForEntry
+    ├── charAppearance.js  ← CHAR_APPEARANCE_SYSTEM_PROMPT, buildCharacterAppearancePrompt,
+    │                         generateCharacterAppearance
+    ├── activeChars.js     ← autoDetectActiveCharacters, addActiveCharacter, removeActiveCharacter,
+    │                         updateActiveCharactersList, populateActiveCharacterDropdown
+    ├── gallery.js         ← addToGallery, deleteGalleryImage, renderGallery, updateGalleryScope
+    ├── stylePreset.js     ← generateStylePreset, maybeQueueStylePreset, buildVisionCandidates,
+    │                         updateVisionModelDropdown
+    └── api.js             ← callImageAPI, callChatAPI, generateImageFromPrompt,
+                              generateImageWithOptions, fetchModelsFromAPI
+```
+
+Each module will export its public functions; `index.js` imports them.
+Migration can be done incrementally: one module per PR, replacing inline code without changing behaviour.
 
 ---
 
 ## Version bump
-- [ ] Bump `manifest.json` version to `1.1.0`
-- [ ] Update `README.md` Features section (only if explicitly asked)
+- [x] Bump `manifest.json` version to `1.1.0`
+- [x] Update `README.md` Features section
+- [ ] Bump `manifest.json` version to `1.2.0` (after Phase 5 is fully wired into UI)
+- [ ] Update `README.md` — document unified appearance generation + persona support
