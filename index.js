@@ -3615,7 +3615,7 @@ async function generateCharacterAppearance(entryKey, promptOverride = null) {
                 { role: 'system', content: CHAR_APPEARANCE_SYSTEM_PROMPT },
                 { role: 'user', content: buildUserContent(includeImage, userPromptText) },
             ],
-            max_tokens: 600,
+            max_tokens: 1000,
             temperature: 0.3,
         };
         addRuntimeLog('debug', 'Character appearance API call', { entryKey, visionModel, includeImage });
@@ -3623,10 +3623,31 @@ async function generateCharacterAppearance(entryKey, promptOverride = null) {
         const raw = resp.choices?.[0]?.message?.content?.trim();
         if (!raw) throw new Error('No content returned');
 
-        // Parse JSON — strip markdown fences if present
-        const jsonText = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-        const parsed = JSON.parse(jsonText);
-        if (!parsed.visual_description || !parsed.style_preset) throw new Error('Missing required fields in response');
+        // Robustly extract the JSON object from the response:
+        // 1. Strip markdown code fences (```json ... ``` or ``` ... ```)
+        // 2. Find the first '{' and last '}' to isolate the object even if
+        //    the model wrapped it in prose or trailing commentary
+        let jsonText = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        const firstBrace = jsonText.indexOf('{');
+        const lastBrace = jsonText.lastIndexOf('}');
+        if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+            addRuntimeLog('error', 'No JSON object found in response', { entryKey, raw });
+            throw new Error(`Response did not contain a JSON object. Raw: ${raw.slice(0, 200)}`);
+        }
+        jsonText = jsonText.slice(firstBrace, lastBrace + 1);
+
+        let parsed;
+        try {
+            parsed = JSON.parse(jsonText);
+        } catch (parseErr) {
+            addRuntimeLog('error', 'JSON parse failed', { entryKey, jsonText, parseErr: parseErr.message });
+            throw new Error(`Failed to parse JSON response: ${parseErr.message}. Raw snippet: ${jsonText.slice(0, 200)}`);
+        }
+
+        if (!parsed.visual_description || !parsed.style_preset) {
+            addRuntimeLog('error', 'Missing required fields in parsed response', { entryKey, parsed });
+            throw new Error(`Response JSON missing required fields. Got keys: ${Object.keys(parsed).join(', ')}`);
+        }
         return parsed;
     };
 
