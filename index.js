@@ -3545,42 +3545,35 @@ function detectCharactersInText(text) {
 function buildCharacterAppearancePromptTemplate() {
     return `You are a character visual analyzer.
 
-Analyze the provided **character image** and **character card** to produce a description suitable for **image generation models**.
+Your task: analyze the **character image** and/or **character card** and output a JSON description ready for use by an image generation model.
 
-Both the image and the character card have **equal weight** and should complement each other when determining the character's appearance.
+**Source priority:**
+- When an image is provided, it is the **primary visual reference**. Derive appearance from what is directly visible.
+- The character card **fills in details not visible in the image** (e.g., eye color if obscured, clothing details if cropped).
+- If the image is missing, a placeholder, or a default avatar, rely on the card alone.
 
-If the image is **missing, a placeholder, or a default avatar**, rely on the character card only.
-
-If the image and card **conflict**, prefer the **image** unless it is missing or a placeholder.
-
-Describe only **visual appearance**, including when available:
+**visual_description** — describe only what is directly visible or explicitly stated:
 - approximate age
 - gender presentation
 - ethnicity / skin tone
 - body build
 - facial structure
 - hair style and color
-- eyes
+- eyes (color, shape)
 - clothing / outfit
 - overall visual vibe
 
-Do not include:
-- location (cities, countries)
-- occupation
-- personality traits
-- lifestyle assumptions
+Do not include: location, occupation, personality traits, lifestyle assumptions.
+Do not guess or hallucinate. Do not use speculative phrases ("likely", "probably", "suggesting").
 
-Only describe traits that directly affect visible appearance.
+**Format rules for visual_description** based on **target_image_generation_model**:
+- Diffusion model (HiDream, FLUX, Stable Diffusion, Pony, etc.) → **15\u201330 comma-separated tags**. No sentences.
+- Language-model generator (DALL-E, GPT-image, Ideogram, etc.) → **2\u20133 natural language sentences**.
 
-Rules:
-- Use details from **either source when clearly stated or visible**.
-- If a feature is **not clearly visible in the image or described in the card**, **do not include it**.
-- **Do not guess or hallucinate missing features.**
-- **Avoid speculative phrases such as "likely", "probably", or "suggesting".**
-- Keep the description **concise (40\u2013120 words).**
-- Format **visual_description** as **comma-separated tags** if **target_image_model** is a diffusion model (HiDream, FLUX, Stable Diffusion, Pony, etc.), or as a **natural language sentence** if it is a language-model-based generator (DALL-E, GPT-image, Ideogram, etc.).
+**style_preset** — identify the visual rendering style of the character's portrait (or best inference from the card if no image is available). Output **8\u201315 comma-separated tags** covering: art style, rendering medium, lighting, color mood.
+Example: "photorealistic, cinematic portrait, soft studio lighting, warm golden tones, shallow depth of field, high detail"
 
-Also generate a **style preset** describing the visual rendering style (examples: photorealistic, anime, manga, fantasy illustration, comic art, digital painting, 3D render, cinematic lighting).
+---
 
 Character Data:
 
@@ -3588,13 +3581,15 @@ Character Data:
 
 **character_image**: {{character_image}}
 
-**target_image_model**: {{image_model}}
+**target_image_generation_model**: {{image_model}}
 
-Return **only valid JSON**.
+---
+
+Output ONLY the raw JSON object — no markdown, no code fences, no explanation text before or after.
 
 {
-  "visual_description": "image-generation-ready description of the character's appearance",
-  "style_preset": "short visual rendering style description"
+  "visual_description": "1girl, long black hair, dark brown eyes, warm olive skin, slender build, white crop top, high-waisted jeans",
+  "style_preset": "photorealistic, cinematic portrait, soft studio lighting, warm golden tones, shallow depth of field"
 }`;
 }
 
@@ -3603,7 +3598,8 @@ Return **only valid JSON**.
  * - {{character_card}}  → character name + description + personality + scenario
  * - {{character_image}} → descriptive note about image availability (image is attached as a vision
  *                         message part separately; the note tells the model whether to expect one)
- * - {{image_model}}     → the image generation model name (so instructions can be tailored to it)
+ * - {{image_model}}     → the image generation model name (the model that will consume this
+ *                         description to generate images; used so the format rule can be tailored)
  */
 function resolveAppearanceTemplate(template, entryKey, hasImage = false, imageModel = '') {
     let cardText = '';
