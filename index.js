@@ -3539,6 +3539,10 @@ const CHAR_APPEARANCE_SYSTEM_PROMPT = `You are a character visual analyzer for A
 Your task is to describe a character's physical appearance based ONLY on what is clearly visible in the provided image and explicitly stated in the character card.
 Do NOT invent, infer, or guess any detail that is not directly shown or written. If a detail is unclear or absent, omit it entirely.
 
+INPUT:
+  {{character_card}}   — Character's name, description, personality, and scenario (textual reference).
+  {{character_image}}  — Character's portrait image (attached when available; takes precedence over text as the primary visual reference).
+
 Describe only the attributes you are certain about (include all that apply):
 - approximate age
 - gender presentation
@@ -3578,28 +3582,38 @@ Example of a valid complete response:
 }`;
 
 /**
- * Build the user-facing editable prompt text for character appearance generation.
- * Sends the full character card (description + personality + scenario) to the AI.
+ * Return the default editable prompt template for character appearance generation.
+ * {{character_card}} and {{character_image}} are placeholders resolved at generation time.
  */
-async function buildCharacterAppearancePrompt(entryKey) {
-    const displayName = getEntryDisplayLabel(entryKey);
-    const avatarResult = await getAvatarForEntry(entryKey).catch(() => null);
+function buildCharacterAppearancePromptTemplate() {
+    return `{{character_card}}\n\n{{character_image}}\n\nAnalyze this character's visual appearance and return the visual_description and style_preset JSON as described in the instructions.`;
+}
 
-    let lines = [`Character: ${displayName}`];
-
+/**
+ * Resolve a prompt template for a given entry:
+ * - {{character_card}}  → character name + description + personality + scenario
+ * - {{character_image}} → stripped from text (the image is attached as a vision message part separately)
+ */
+function resolveAppearanceTemplate(template, entryKey) {
+    let cardText = '';
     if (!isPersonaKey(entryKey)) {
         const char = getCharacterByName(entryKey);
-        if (char?.description)  lines.push(`\nDescription:\n${char.description}`);
-        if (char?.personality)  lines.push(`\nPersonality:\n${char.personality}`);
-        if (char?.scenario)     lines.push(`\nScenario:\n${char.scenario}`);
+        const parts = [];
+        if (char?.name)        parts.push(`Character: ${char.name}`);
+        if (char?.description) parts.push(`Description:\n${char.description}`);
+        if (char?.personality) parts.push(`Personality:\n${char.personality}`);
+        if (char?.scenario)    parts.push(`Scenario:\n${char.scenario}`);
+        cardText = parts.join('\n\n');
     } else {
-        const nativeDesc = getEffectiveDescriptionForEntry(entryKey);
-        if (nativeDesc) lines.push(`\nDescription:\n${nativeDesc}`);
+        const label = getEntryDisplayLabel(entryKey);
+        const desc  = getEffectiveDescriptionForEntry(entryKey);
+        cardText = `Persona: ${label}${desc ? '\n\nDescription:\n' + desc : ''}`;
     }
-
-    if (avatarResult) lines.push('\n[Portrait image attached — use as primary visual reference]');
-    lines.push('\nAnalyze this character\'s visual appearance and return the visual_description and style_preset JSON.');
-    return lines.join('');
+    return template
+        .replace('{{character_card}}', cardText)
+        .replace('{{character_image}}', '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
 }
 
 /**
@@ -3640,12 +3654,14 @@ async function generateCharacterAppearance(entryKey, promptOverride = null) {
     };
 
     const callGeneration = async (includeImage) => {
-        const userPromptText = promptOverride || await buildCharacterAppearancePrompt(entryKey);
+        const template = promptOverride || buildCharacterAppearancePromptTemplate();
+        const wantsImage = template.includes('{{character_image}}');
+        const userPromptText = resolveAppearanceTemplate(template, entryKey);
         const chatBody = {
             model: visionModel,
             messages: [
                 { role: 'system', content: CHAR_APPEARANCE_SYSTEM_PROMPT },
-                { role: 'user', content: buildUserContent(includeImage, userPromptText) },
+                { role: 'user', content: buildUserContent(includeImage && wantsImage, userPromptText) },
             ],
             max_tokens: 1000,
             temperature: 0.3,
@@ -6189,13 +6205,6 @@ jQuery(async () => {
         }
 
         loadCharacterDescription(newKey);
-
-        // If the prompt panel is open, refresh it for the new character
-        if ($('#nig_gen_prompt_body').is(':visible') && newKey) {
-            buildCharacterAppearancePrompt(newKey).then(text => {
-                $('#nig_gen_prompt_textarea').val(text);
-            });
-        }
     });
 
     $('#nig_save_char_desc_btn').on('click', saveCharacterDescription);
@@ -6264,22 +6273,26 @@ jQuery(async () => {
         }
     });
 
-    // Collapsible prompt panel — pre-populate textarea on expand
-    $('#nig_gen_prompt_toggle').on('click', async function() {
+    // Collapsible prompt panel — pre-populate textarea on expand (only if empty)
+    $('#nig_gen_prompt_toggle').on('click', function() {
         const body = $('#nig_gen_prompt_body');
         const chevron = $(this).find('.nig_collapsible_chevron');
         if (body.is(':visible')) {
             body.slideUp(150);
             chevron.css('transform', '');
         } else {
-            const entryKey = $('#nig_char_select').val();
-            if (entryKey) {
-                const promptText = await buildCharacterAppearancePrompt(entryKey);
-                $('#nig_gen_prompt_textarea').val(promptText);
+            // Pre-fill with default template only if the user has not customised it yet
+            if (!$('#nig_gen_prompt_textarea').val().trim()) {
+                $('#nig_gen_prompt_textarea').val(buildCharacterAppearancePromptTemplate());
             }
             body.slideDown(150);
             chevron.css('transform', 'rotate(90deg)');
         }
+    });
+
+    $('#nig_reset_gen_prompt_btn').on('click', function(e) {
+        e.preventDefault();
+        $('#nig_gen_prompt_textarea').val(buildCharacterAppearancePromptTemplate());
     });
 
     // Auto-detect active characters button

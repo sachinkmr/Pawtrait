@@ -123,8 +123,12 @@
       <span>Edit AI Generation Prompt</span>
     </div>
     <div id="nig_gen_prompt_body" style="display:none;margin-top:8px;">
-      <textarea id="nig_gen_prompt_textarea" class="text_pole textarea_compact" rows="8" placeholder="Prompt will be auto-filled when expanded…"></textarea>
-      <small class="nig_hint">Edit the prompt sent to AI. Changes apply only to the next generation.</small>
+      <textarea id="nig_gen_prompt_textarea" class="text_pole textarea_compact" rows="8" placeholder="Expand to pre-fill with the default template…"></textarea>
+      <div class="nig_hint" style="margin-top:6px;line-height:1.6;">
+        <code>{{character_card}}</code> — replaced with name, description, personality &amp; scenario from the character card<br>
+        <code>{{character_image}}</code> — replaced with the character's portrait image when available (omit to skip image)<br>
+        Your edits persist while the panel is open. <a id="nig_reset_gen_prompt_btn" href="#">Reset to default</a>
+      </div>
     </div>
   </div>
 </div>
