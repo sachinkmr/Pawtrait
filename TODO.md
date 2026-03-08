@@ -130,12 +130,12 @@
 - [x] `index.js` — `saveCharacterDescription()` / `resetCharacterDescription()` use `entryKey` key
 - [x] `index.js` — `updateSavedCharactersList()` shows `[You]` prefix via `getEntryDisplayLabel()`
 - [x] `index.js` — edit/delete handlers in saved list use `entryKey` + `getEntryDisplayLabel()`
-- [ ] `settings.html` — remove the entire "User/Persona Visual Descriptions" section (~10 lines)
+- [x] `settings.html` — remove the entire "User/Persona Visual Descriptions" section (~10 lines)
       (`#nig_persona_select`, `#nig_persona_description`, save/reset buttons, `#nig_persona_saved_list`)
-- [ ] `settings.html` — add `id="nig_char_trigger_row"` to the Per-Character trigger `<div class="nig_section">`
+- [x] `settings.html` — add `id="nig_char_trigger_row"` to the Per-Character trigger `<div class="nig_section">`
       (needed so `loadCharacterDescription` can show/hide it for personas)
 
-### 5.3 Collapsible Prompt Editor (before Unified Generation) ✅ / UI pending
+### 5.3 Collapsible Prompt Editor (before Unified Generation) ✅
 > Edit the generation prompt before sending; panel pre-populates when expanded.
 
 - [x] `index.js` — `CHAR_APPEARANCE_SYSTEM_PROMPT` constant
@@ -143,7 +143,7 @@
       char name + description + `[Portrait image attached]` note
 - [x] `index.js` — `#nig_gen_prompt_toggle` click handler: `slideDown`/`slideUp` with chevron rotation;
       calls `buildCharacterAppearancePrompt` to pre-fill textarea on expand
-- [ ] `settings.html` — collapsible panel below Style Preset button row:
+- [x] `settings.html` — collapsible panel below Style Preset button row:
   ```html
   <div class="nig_collapsible" style="margin-top:10px;">
     <div id="nig_gen_prompt_toggle" class="nig_collapsible_header">
@@ -158,7 +158,7 @@
   </div>
   ```
 
-### 5.4 Unified Character Appearance Generation ✅ / UI pending
+### 5.4 Unified Character Appearance Generation ✅
 > One button, one API call → returns `{ visual_description, style_preset }`, stores both.
 
 - [x] `index.js` — `generateCharacterAppearance(entryKey, promptOverride)`:
@@ -169,7 +169,7 @@
       - updates `#nig_char_description` + `#nig_style_preset_tags` UI if character is selected
       - retries without image on vision failure
 - [x] `index.js` — `#nig_generate_char_appearance_btn` click handler (spinner, error handling)
-- [ ] `settings.html` — add wand-magic icon button next to `#nig_refresh_chars_btn`:
+- [x] `settings.html` — add wand-magic icon button next to `#nig_refresh_chars_btn`:
   ```html
   <div id="nig_generate_char_appearance_btn" class="nig_input_btn"
        title="Generate Visual Description &amp; Style Preset via AI — analyzes avatar and description to produce both fields in one call">
@@ -177,7 +177,7 @@
   </div>
   ```
 
-### 5.5 Auto-Detect Active Characters ✅ / UI pending
+### 5.5 Auto-Detect Active Characters ✅
 > LLM scans recent 20 messages → JSON array of character names → merges with manual list.
 > **Merge strategy**: auto-detected entries replace the previous auto set; manually-added entries
 > that were NOT in the previous auto set are preserved.
@@ -191,8 +191,8 @@
 - [x] `index.js` — hooked into `generateImage()`: if `auto_detect_active_chars`, runs silently before generation
 - [x] `index.js` — `#nig_auto_detect_chars_btn` click handler (spinner)
 - [x] `index.js` — `#nig_auto_detect_active_chars` change handler (saves setting)
-- [ ] `loadSettings()` — add `$('#nig_auto_detect_active_chars').prop('checked', s.auto_detect_active_chars || false)`
-- [ ] `settings.html` — Active Characters tab: add below the `nig_saved_list`:
+- [x] `loadSettings()` — add `$('#nig_auto_detect_active_chars').prop('checked', s.auto_detect_active_chars || false)`
+- [x] `settings.html` — Active Characters tab: add below the `nig_saved_list`:
   ```html
   <div class="nig_button_row" style="margin-top:8px;">
     <div id="nig_auto_detect_chars_btn" class="menu_button menu_button_icon nig_small_btn"
@@ -268,5 +268,5 @@ Migration can be done incrementally: one module per PR, replacing inline code wi
 ## Version bump
 - [x] Bump `manifest.json` version to `1.1.0`
 - [x] Update `README.md` Features section
-- [ ] Bump `manifest.json` version to `1.2.0` (after Phase 5 is fully wired into UI)
-- [ ] Update `README.md` — document unified appearance generation + persona support
+- [x] Bump `manifest.json` version to `1.2.0` (after Phase 5 is fully wired into UI)
+- [x] Update `README.md` — document unified appearance generation + persona support

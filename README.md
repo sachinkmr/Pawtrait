@@ -14,7 +14,7 @@
 <img src="https://img.shields.io/github/stars/ThatGirl-me/Pawtrait?style=for-the-badge&label=%E2%AD%90%20stars&color=ff9ecf">
 <img src="https://img.shields.io/github/forks/ThatGirl-me/Pawtrait?style=for-the-badge&label=%F0%9F%8D%B4%20forks&color=ffb7d5">
 <img src="https://img.shields.io/github/last-commit/ThatGirl-me/Pawtrait?style=for-the-badge&label=%F0%9F%93%85%20last%20commit&color=ffa6cc">
-<img src="https://img.shields.io/badge/🦴%20version-v1.0.3-ff9ecf?style=for-the-badge&color=ffa6cc">
+<img src="https://img.shields.io/badge/🦴%20version-v1.2.0-ff9ecf?style=for-the-badge&color=ffa6cc">
 
 
 </p>
@@ -38,7 +38,42 @@ Made with paws. Made with love. 🐾💗
 
 ---
 ## 🔄 Updates 
+### 🆕 What's New — v1.2.0
 
+**Phase 5: Unified Character Appearance & Persona Integration**
+
+1. 🪄 **Unified Appearance Generation**
+   - New wand button (✨) generates both **Visual Description** and **Style Preset** in a single AI call
+   - Vision-capable models analyse the character's avatar; falls back to description-only when no vision support is available
+   - Collapsible prompt panel lets you review and edit the exact prompt before sending
+
+2. 👤 **Personas in Character Dropdown**
+   - Your SillyTavern personas now appear alongside characters in the same dropdown, shown as `[You] Name`
+   - Manage persona visuals without a separate UI section; trigger pattern row is hidden for personas automatically
+
+3. 🔍 **Auto-Detect Active Characters**
+   - New **Auto-detect** button in the Active Characters tab uses an LLM scan of recent messages to populate the active list
+   - Toggle to auto-detect silently before every image generation
+
+4. 🔭 **Vision Model Dropdown**
+   - The vision model field is now a searchable dropdown auto-populated from your fetched models
+
+---
+
+### 🆕 What's New — v1.1.0
+
+**Phases 1–4: Generation Controls, Gallery, Triggers & Style Presets**
+
+1. ➕ **Negative Prompt** — Exclude unwanted elements from every generation
+2. 🔒 **Configurable Seed** — Lock a seed for reproducible outputs or randomise each time
+3. ✏️ **Edit Before Generate** — Optionally open the full prompt editor before any image fires
+4. 🗂️ **Chat-Scoped Gallery** — Filter the gallery to images from the current chat only
+5. 🤖 **Auto-Generate on Trigger** — Fire images automatically when a regex matches incoming messages; per-character override patterns supported
+6. 👥 **Scene-Aware Character References** — Auto-detects named characters in recent messages and injects their avatars as reference images
+7. 🧩 **Model-Aware Prompt Style** — Automatically formats prompts as tag-style or natural language based on the chosen image model
+8. 🎨 **Per-Character Style Presets** — Generate comma-separated style tags from a character's avatar + description via LLM vision; injects automatically into every prompt
+
+---
 ### 🆕 What’s New — v1.0.3
 
 Pawtrait v1.0.3 brings more control, more clarity, and more prompt magic ✨
@@ -68,14 +103,23 @@ Pawtrait v1.0.3 brings more control, more clarity, and more prompt magic ✨
 
 ## ✨ Features
 
-- 🐕 Multi-provider image generation  
-- 🖼️ Avatar references for character consistency  
-- 🧾 Optional AI summarizer to craft clean prompts  
-- 📚 Context depth (multi-message scenes)  
-- ♻️ Previous image recall for continuity  
-- 🗂️ Built-in gallery  
-- ⌨️ Slash commands  
+- 🐕 Multi-provider image generation
+- 🖼️ Avatar references for character consistency
+- 🧾 Optional AI summarizer to craft clean prompts
+- 📚 Context depth (multi-message scenes)
+- ♻️ Previous image recall for continuity
+- 🗂️ Built-in gallery with chat-scoped filter
+- ⌨️ Slash commands
 - 🐾 One-click generate buttons under messages
+- ➕ Negative prompt & configurable seed
+- ✏️ Inline prompt editing before generation
+- 🤖 Auto-generate on regex trigger (with per-character patterns)
+- 👥 Scene-aware character reference injection
+- 🧩 Model-aware prompt style (tags vs natural language)
+- 🎨 Per-character AI-generated style presets
+- 🪄 Unified character appearance generation (visual + style in one call)
+- 👤 Persona support in the character dropdown
+- 🔍 Auto-detect active characters from chat
 
 
 Providers supported:
