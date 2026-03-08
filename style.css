@@ -1369,3 +1369,52 @@
         min-height: 44px;
     }
 }
+
+/* ─── New feature styles ─────────────────────────────── */
+
+/* Gallery scope toggle pills */
+.nig_gallery_scope_row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.nig_gallery_scope_pill {
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.82em;
+    cursor: pointer;
+    border: 1px solid var(--SmartThemeBorderColor);
+    color: var(--SmartThemeQuoteColor);
+    transition: all 0.15s;
+    user-select: none;
+}
+
+.nig_gallery_scope_pill:hover {
+    background: var(--SmartThemeBlurTintColor);
+    color: var(--SmartThemeBodyColor);
+}
+
+.nig_gallery_scope_pill.active {
+    background: var(--SmartThemeQuoteColor);
+    color: var(--SmartThemeBodyColor);
+    border-color: var(--SmartThemeQuoteColor);
+}
+
+/* Seed row — input + dice button side by side */
+.nig_checkbox_inline {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+}
+
+.nig_checkbox_inline .nig_checkbox_label {
+    font-size: 0.85em;
+}
+
+/* Style preset status inline */
+.nig_status_inline {
+    font-size: 0.8em;
+    margin-left: 6px;
+}
