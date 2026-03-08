@@ -92,13 +92,8 @@
 
 <div class="nig_tab_content" data-tab="characters">
 <div class="nig_section">
-  <div class="nig_section_header">
-    <div class="nig_section_title" style="margin-bottom:0;"><i class="fa-solid fa-user-pen"></i> Character Appearance</div>
-    <div id="nig_generate_char_appearance_btn" class="menu_button menu_button_icon nig_small_btn" title="Generate Visual Description &amp; Style Preset via AI — analyzes avatar and description in one call" style="white-space:nowrap;">
-      <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
-    </div>
-  </div>
-  <small class="nig_hint" style="margin:8px 0 12px;display:block;">Select a character to view and edit their appearance data. Use Generate to auto-fill via AI.</small>
+  <div class="nig_section_title"><i class="fa-solid fa-user-pen"></i> Character Appearance</div>
+  <small class="nig_hint" style="margin:0 0 12px;display:block;">Appearance data is injected into every image prompt. Changes are auto-saved when switching characters.</small>
   <div class="nig_field">
     <label for="nig_char_select">Character</label>
     <div class="nig_input_group">
@@ -109,7 +104,7 @@
   <div class="nig_field">
     <label for="nig_char_description">Visual Description <span id="nig_char_name_label" style="font-weight:400;opacity:0.75;"></span></label>
     <textarea id="nig_char_description" class="text_pole textarea_compact" rows="5" placeholder="Select a character…"></textarea>
-    <small class="nig_hint">Physical appearance injected into image prompts. Auto-loaded from card; save to override.</small>
+    <small class="nig_hint">Physical appearance injected into image prompts. Auto-loaded from card; edit to override.</small>
   </div>
   <div class="nig_field">
     <label for="nig_style_preset_tags">Style Tags <span id="nig_style_preset_status" class="nig_status_inline"></span></label>
@@ -117,8 +112,10 @@
     <small class="nig_hint">Rendering style injected into every image prompt for this character.</small>
   </div>
   <div class="nig_button_row" style="margin-top:10px;">
-    <button type="button" id="nig_save_char_desc_btn" class="menu_button menu_button_icon nig_small_btn" title="Save visual description and style preset"><i class="fa-solid fa-floppy-disk"></i> Save</button>
-    <button type="button" id="nig_reset_char_desc_btn" class="menu_button menu_button_icon nig_small_btn" title="Reset visual description and style preset to defaults"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+    <button type="button" id="nig_reset_char_desc_btn" class="menu_button menu_button_icon nig_small_btn" title="Reset visual description and style preset to card defaults"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+    <div id="nig_generate_char_appearance_btn" class="menu_button menu_button_icon nig_small_btn" title="Generate Visual Description &amp; Style Preset via AI — analyzes avatar and full character card">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+    </div>
   </div>
   <div class="nig_collapsible" style="margin-top:12px;">
     <div id="nig_gen_prompt_toggle" class="nig_collapsible_header">
@@ -132,14 +129,16 @@
   </div>
 </div>
 <div id="nig_char_trigger_row" class="nig_section">
-<div class="nig_section_title"><i class="fa-solid fa-bolt"></i> Per-Character Auto-Generate Trigger</div>
-<small class="nig_hint" style="margin-bottom:8px;display:block;">Override the global auto-generate regex for this character. Leave blank to use the global setting.</small>
-<div class="nig_field">
-<label for="nig_char_trigger_pattern">Trigger Regex Override</label>
-<input type="text" id="nig_char_trigger_pattern" class="text_pole" placeholder="e.g. .*describes.*|.*notices.* (leave blank for global)" />
+  <div class="nig_section_title"><i class="fa-solid fa-bolt"></i> Per-Character Auto-Generate Trigger</div>
+  <small class="nig_hint" style="margin-bottom:8px;display:block;">Override the global auto-generate regex for this character. Leave blank to use the global setting.</small>
+  <div class="nig_field">
+    <label for="nig_char_trigger_pattern">Trigger Regex Override</label>
+    <input type="text" id="nig_char_trigger_pattern" class="text_pole" placeholder="e.g. .*describes.*|.*notices.* (leave blank for global)" />
+  </div>
 </div>
+<div class="nig_button_row" style="padding:0 2px 12px;">
+  <button type="button" id="nig_save_char_desc_btn" class="menu_button menu_button_icon" title="Save description and style preset for the selected character"><i class="fa-solid fa-floppy-disk"></i><span>Save Appearance</span></button>
 </div>
-
 </div>
 
 <div class="nig_tab_content" data-tab="active">

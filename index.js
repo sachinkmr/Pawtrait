@@ -1183,11 +1183,15 @@ function updateActiveCharactersList() {
     }
 }
 
+/** Tracks whether the user has edited the description/style fields since the last character load. */
+let _charDescDirty = false;
+
 /**
  * Load character description - auto-loads from card or persona, shows custom if saved.
  * entryKey is either a character name or a __persona__<key> string.
  */
 function loadCharacterDescription(entryKey) {
+    _charDescDirty = false;
     if (!entryKey) {
         $('#nig_char_description').val('');
         $('#nig_char_name_label').text('');
@@ -1218,7 +1222,8 @@ function loadCharacterDescription(entryKey) {
     // Load style preset
     const preset = settings.char_style_presets?.[entryKey];
     $('#nig_style_preset_tags').val(preset || '');
-    $('#nig_style_preset_status').text(preset ? 'Saved ✓' : '').css('color', '');
+    $('#nig_style_preset_status').text(preset ? 'Saved \u2713' : '').css('color', '');
+    _charDescDirty = false;
 }
 
 /**
@@ -1259,6 +1264,7 @@ function saveCharacterDescription() {
     saveSettingsDebounced();
     updateSavedCharactersList();
     updateActiveCharactersList();
+    _charDescDirty = false;
     $('#nig_style_preset_status').text('Saved ✓').css('color', 'var(--SmartThemeQuoteColor)');
     toastr.success(`Saved description and style preset for ${label}`, 'Pawtrait');
 }
@@ -1288,6 +1294,7 @@ function resetCharacterDescription() {
     // Clear style preset UI
     $('#nig_style_preset_tags').val('');
     $('#nig_style_preset_status').text('');
+    _charDescDirty = false;
 
     toastr.info(`Reset description and style preset for ${label}`, 'Pawtrait');
 }
@@ -3572,17 +3579,26 @@ Example of a valid complete response:
 
 /**
  * Build the user-facing editable prompt text for character appearance generation.
- * Returns a plain string the user can inspect and modify before sending.
+ * Sends the full character card (description + personality + scenario) to the AI.
  */
 async function buildCharacterAppearancePrompt(entryKey) {
     const displayName = getEntryDisplayLabel(entryKey);
-    const description = getEffectiveDescriptionForEntry(entryKey);
     const avatarResult = await getAvatarForEntry(entryKey).catch(() => null);
 
     let lines = [`Character: ${displayName}`];
-    if (description) lines.push(`\nDescription:\n${description}`);
-    if (avatarResult) lines.push('\n[Portrait image attached — used as visual reference]');
-    lines.push('\nAnalyze this character\'s visual appearance and generate their visual_description and style_preset.');
+
+    if (!isPersonaKey(entryKey)) {
+        const char = getCharacterByName(entryKey);
+        if (char?.description)  lines.push(`\nDescription:\n${char.description}`);
+        if (char?.personality)  lines.push(`\nPersonality:\n${char.personality}`);
+        if (char?.scenario)     lines.push(`\nScenario:\n${char.scenario}`);
+    } else {
+        const nativeDesc = getEffectiveDescriptionForEntry(entryKey);
+        if (nativeDesc) lines.push(`\nDescription:\n${nativeDesc}`);
+    }
+
+    if (avatarResult) lines.push('\n[Portrait image attached — use as primary visual reference]');
+    lines.push('\nAnalyze this character\'s visual appearance and return the visual_description and style_preset JSON.');
     return lines.join('');
 }
 
@@ -6165,8 +6181,21 @@ jQuery(async () => {
 
     // Character Description Settings
     $('#nig_char_select').on('change', function() {
-        const charName = $(this).val();
-        loadCharacterDescription(charName);
+        const newKey = $(this).val();
+
+        // Auto-save dirty fields before switching away
+        if (_charDescDirty) {
+            saveCharacterDescription();
+        }
+
+        loadCharacterDescription(newKey);
+
+        // If the prompt panel is open, refresh it for the new character
+        if ($('#nig_gen_prompt_body').is(':visible') && newKey) {
+            buildCharacterAppearancePrompt(newKey).then(text => {
+                $('#nig_gen_prompt_textarea').val(text);
+            });
+        }
     });
 
     $('#nig_save_char_desc_btn').on('click', saveCharacterDescription);
@@ -6188,8 +6217,14 @@ jQuery(async () => {
         saveSettingsDebounced();
     });
 
+    // Mark dirty + clear status when user edits either field
+    $('#nig_char_description').on('input', function() {
+        _charDescDirty = true;
+    });
+
     // Style preset — typing clears the "Saved ✓" status so user knows to Save
     $('#nig_style_preset_tags').on('input', function() {
+        _charDescDirty = true;
         $('#nig_style_preset_status').text('').css('color', '');
     });
 
