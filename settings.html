@@ -82,8 +82,10 @@
 </div>
 <div class="nig_field">
 <label for="nig_style_preset_vision_model">Vision Model (Style Presets)</label>
-<input type="text" id="nig_style_preset_vision_model" class="text_pole" placeholder="Leave blank to use Summarizer model" />
-<small class="nig_hint">Model used when generating per-character style presets. Leave blank to reuse the Summarizer model.</small>
+<select id="nig_style_preset_vision_model" class="text_pole">
+<option value="">-- Use Summarizer Model --</option>
+</select>
+<small class="nig_hint">Model used when generating per-character style presets. Leave blank to reuse the Summarizer model. Fetch models above to populate this list.</small>
 </div>
 </div>
 </div>

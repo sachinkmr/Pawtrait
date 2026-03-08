@@ -627,8 +627,8 @@ async function loadSettings() {
     $('#nig_auto_generate_regex').val(s.auto_generate_regex || '');
     $('#nig_auto_generate_cooldown').val(s.auto_generate_cooldown_secs ?? 30);
 
-    // Style preset vision model
-    $('#nig_style_preset_vision_model').val(s.style_preset_vision_model || '');
+    // Style preset vision model dropdown
+    updateVisionModelDropdown(cachedChatModels);
 
     // Gallery scope pills
     const scope = s.gallery_scope || 'all';
@@ -810,6 +810,59 @@ function updateSummarizerDropdown(models, mode = summarizerModelListMode) {
     }
 }
 
+/**
+ * Filters a model list to vision-capable chat models.
+ * Checks input_modalities if present (Pollinations/OpenRouter), otherwise uses
+ * a name heuristic for well-known multimodal model families.
+ */
+function buildVisionCandidates(models) {
+    const chatModels = buildSummarizerCandidates(models);
+    return chatModels.filter(m => {
+        // Use explicit modality data when available
+        const inputMods = m?.input_modalities ?? m?.architecture?.input_modalities ?? [];
+        if (Array.isArray(inputMods) && inputMods.length > 0) {
+            return inputMods.includes('image');
+        }
+        // Fallback: name heuristic for well-known vision model families
+        const id = getSummarizerModelId(m).toLowerCase();
+        return /gpt-4o|gpt-4-vision|gpt-4\.5|claude-3|gemini|vision/.test(id);
+    });
+}
+
+/**
+ * Populates the #nig_style_preset_vision_model <select> with vision-capable
+ * models from the provided list.  Always prepends a blank "Use Summarizer
+ * Model" option.  Restores the previously-saved value when possible.
+ */
+function updateVisionModelDropdown(models) {
+    const select = $('#nig_style_preset_vision_model');
+    if (!select.length) return;
+
+    const settings = extension_settings[extensionName];
+    const savedValue = settings.style_preset_vision_model || '';
+
+    const candidates = sortSummarizerCandidates(buildVisionCandidates(models));
+
+    // Keep the saved model visible even if it fell outside the filtered list
+    let visible = [...candidates];
+    if (savedValue && !visible.some(m => getSummarizerModelId(m) === savedValue)) {
+        const found = Array.isArray(models) ? models.find(m => getSummarizerModelId(m) === savedValue) : null;
+        if (found) visible = [found, ...visible];
+    }
+
+    select.empty();
+    select.append('<option value="">-- Use Summarizer Model --</option>');
+
+    for (const m of visible) {
+        const modelId = getSummarizerModelId(m);
+        const displayName = getSummarizerModelDisplayName(m);
+        if (modelId) select.append(`<option value="${modelId}">${displayName}</option>`);
+    }
+
+    // Restore saved value (blank = "Use Summarizer Model" default)
+    select.val(savedValue && select.find(`option[value="${savedValue}"]`).length ? savedValue : '');
+}
+
 async function fetchSummarizerModelsFromAPI(silent = false) {
     const settings = extension_settings[extensionName];
     const providerConfig = getProviderConfig(settings);
@@ -883,6 +936,7 @@ async function fetchSummarizerModelsFromAPI(silent = false) {
             mode: summarizerModelListMode,
         });
         updateSummarizerDropdown(models, summarizerModelListMode);
+        updateVisionModelDropdown(models);
         updateSummarizerModelListToggleButton();
 
         if (!silent) toastr.success(`Found ${models.length} models`, 'Pawtrait');
@@ -6076,7 +6130,7 @@ jQuery(async () => {
         saveSettingsDebounced();
     });
 
-    $('#nig_style_preset_vision_model').on('input', function() {
+    $('#nig_style_preset_vision_model').on('change', function() {
         extension_settings[extensionName].style_preset_vision_model = $(this).val().trim();
         saveSettingsDebounced();
     });
