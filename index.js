@@ -3590,7 +3590,48 @@ Example of a valid complete response:
  * {{character_card}} and {{character_image}} are placeholders resolved at generation time.
  */
 function buildCharacterAppearancePromptTemplate() {
-    return `{{character_card}}\n\n{{character_image}}\n\nAnalyze this character's visual appearance and return the visual_description and style_preset JSON as described in the instructions.`;
+    return `You are a character visual analyzer.
+
+Analyze the provided **character image** and **character card** to produce a description suitable for **image generation models**.
+
+Both the image and the character card have **equal weight** and should complement each other when determining the character's appearance.
+
+If the image is **missing, a placeholder, or a default avatar**, rely on the character card only.
+
+If the image and card **conflict**, prefer the **image** unless it is missing or a placeholder.
+
+Describe only **visual appearance**, including when available:
+- approximate age
+- gender presentation
+- ethnicity / skin tone
+- body build
+- facial structure
+- hair style and color
+- eyes
+- clothing / outfit
+- overall visual vibe
+
+Rules:
+- Use details from **either source when clearly stated or visible**.
+- If a feature is **not clearly visible in the image or described in the card**, **do not include it**.
+- **Do not guess or hallucinate missing features.**
+- Write the visual description in **image-generation prompt style** rather than narrative.
+- Keep the description **concise (40\u2013120 words).**
+
+Also generate a **style preset** describing the visual rendering style (examples: photorealistic, anime, manga, fantasy illustration, comic art, digital painting, 3D render, cinematic lighting).
+
+Character Data:
+
+**character_card**: {{character_card}}
+
+**character_image**: {{character_image}}
+
+Return **only valid JSON**.
+
+{
+  "visual_description": "image-generation-ready description of the character's appearance",
+  "style_preset": "short visual rendering style description"
+}`;
 }
 
 /**
@@ -3667,22 +3708,13 @@ async function generateCharacterAppearance(entryKey, promptOverride = null) {
         const attachImage = includeImage && wantsImage;
         const resolvedText = resolveAppearanceTemplate(template, entryKey, attachImage);
 
-        // When the user has supplied a custom prompt, treat it as the system message
-        // so their instructions are fully authoritative (no conflict with the built-in prompt).
-        // The resolved character data is then sent as the user message.
-        // With the default template, use the built-in system prompt as normal.
-        let messages;
-        if (promptOverride) {
-            messages = [
-                { role: 'system', content: resolvedText },
-                { role: 'user', content: buildUserContent(attachImage, 'Generate the JSON now.') },
-            ];
-        } else {
-            messages = [
-                { role: 'system', content: CHAR_APPEARANCE_SYSTEM_PROMPT },
-                { role: 'user', content: buildUserContent(attachImage, resolvedText) },
-            ];
-        }
+        // The template contains both instructions and character data (as placeholders),
+        // so it always goes as the system message. The image (if available) is attached
+        // to the user turn as a vision part.
+        const messages = [
+            { role: 'system', content: resolvedText },
+            { role: 'user', content: buildUserContent(attachImage, 'Generate the JSON now.') },
+        ];
 
         const chatBody = {
             model: visionModel,
