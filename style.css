@@ -1418,3 +1418,23 @@
     font-size: 0.8em;
     margin-left: 6px;
 }
+
+.nig_collapsible_header {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85em;
+    color: var(--SmartThemeQuoteColor);
+    padding: 4px 0;
+    user-select: none;
+}
+
+.nig_collapsible_header:hover {
+    color: var(--SmartThemeBodyColor);
+}
+
+.nig_collapsible_chevron {
+    transition: transform 150ms ease;
+    font-size: 0.8em;
+}
