@@ -3660,13 +3660,28 @@ async function generateCharacterAppearance(entryKey, promptOverride = null) {
     const callGeneration = async (includeImage) => {
         const template = promptOverride || buildCharacterAppearancePromptTemplate();
         const wantsImage = template.includes('{{character_image}}');
-        const userPromptText = resolveAppearanceTemplate(template, entryKey);
+        const resolvedText = resolveAppearanceTemplate(template, entryKey);
+
+        // When the user has supplied a custom prompt, treat it as the system message
+        // so their instructions are fully authoritative (no conflict with the built-in prompt).
+        // The resolved character data is then sent as the user message.
+        // With the default template, use the built-in system prompt as normal.
+        let messages;
+        if (promptOverride) {
+            messages = [
+                { role: 'system', content: resolvedText },
+                { role: 'user', content: buildUserContent(includeImage && wantsImage, 'Generate the JSON now.') },
+            ];
+        } else {
+            messages = [
+                { role: 'system', content: CHAR_APPEARANCE_SYSTEM_PROMPT },
+                { role: 'user', content: buildUserContent(includeImage && wantsImage, resolvedText) },
+            ];
+        }
+
         const chatBody = {
             model: visionModel,
-            messages: [
-                { role: 'system', content: CHAR_APPEARANCE_SYSTEM_PROMPT },
-                { role: 'user', content: buildUserContent(includeImage && wantsImage, userPromptText) },
-            ],
+            messages,
             max_tokens: 1000,
             temperature: 0.3,
         };
