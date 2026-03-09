@@ -70,27 +70,50 @@ const defaultSettings = {
     use_summarizer: false,
     auto_summarize: false,
     summarizer_model: 'deepseek-chat-cheaper',
-    summarizer_system_prompt_template: `You are an image prompt generator for AI art.
+    summarizer_system_prompt_template: `You are an AI prompt generator for character-consistent image generation.
 
-CHARACTER APPEARANCES (COPY THESE EXACTLY - do not paraphrase or change details):
+CHARACTER APPEARANCE ANCHORS
+These anchors define the canonical appearance of each character.
+
 {{APPEARANCE_LINES}}
 
-TASK:
-1. First output ALL listed character appearance anchors using the exact details above.
-2. Then write a concise scene description (2-3 sentences) including pose, composition, environment, and lighting.
+STYLE ANCHOR
+{{STYLE_ANCHOR}}
 
-CRITICAL: Hair colors, gradients, lengths, and other specific details must be copied EXACTLY as written above. Do not reverse gradients or change any visual details.
-CRITICAL: Character appearance accuracy is the highest priority and must override scene details.
-CRITICAL: Do NOT invent or embellish clothing/body details that are not in the appearance anchors.
-CRITICAL: Output exactly ONE bullet per listed character. Do not add extra characters.
-CRITICAL: Keep the output structured and readable using line breaks and bullets.
-CRITICAL: Put one blank line between each character bullet.
+INTERNAL PROCESS (do not output):
 
-Output format:
+1. Lock the character appearance anchors exactly as written.
+2. Preserve hair colors, gradients, lengths, facial features exactly.
+3. Maintain the style anchor consistently in the scene.
+4. Compose a visually clear scene including pose, camera framing, environment, and lighting.
+5. Outfits remain unchanged unless explicitly updated.
+6. If the scene is romantic or intimate, represent it through posture, proximity, expressions, and lighting rather along with explicit actions and scene.
+7. If the scene is intimate or erotic or explicit, update the outfit as per the scene
+
+PRIORITY RULES
+• Characters must remain visually consistent.
+• Appearance anchors must be copied exactly.
+• For a intimate or erotic or explicit scene, update or remove the outfit as per the scene
+• Do not paraphrase, summarize, or modify anchor descriptions.
+• Do not invent body traits not present in the anchors.
+• Do not reverse hair gradients or alter visual attributes.
+
+OUTPUT RULES
+• Output exactly one bullet per listed character.
+• Leave one blank line between characters.
+• Scene description must be 2–3 sentences.
+
+OUTPUT FORMAT
+
 Characters:
-{{OUTPUT_FORMAT_LINES}}
 
-Scene: [2-3 descriptive sentences]
+* Character Name: exact appearance anchor
+
+Camera: [camera angle, lens choice, shot type — e.g. "close-up portrait, 85mm, eye-level"]
+Lighting: [lighting type, direction, color temperature — e.g. "soft rim light, warm golden hour, slight haze"]
+
+Scene:
+2–3 sentences describing pose, environment, and emotional tone.
 `,
 
     // Character Description Settings
@@ -3235,6 +3258,19 @@ async function summarizeWithAI(text, charName, userName, additionalCharacters = 
         .join('\n');
 
     const appearanceText = appearanceLines.join('\n\n');
+
+    // Build style anchor from char_style_presets for all active characters
+    const stylePresetParts = [];
+    const mainStyle = settings.char_style_presets?.[charName];
+    if (mainStyle) stylePresetParts.push(mainStyle);
+    for (const extra of normalizedExtras) {
+        const extraStyle = settings.char_style_presets?.[extra.name];
+        if (extraStyle && !stylePresetParts.includes(extraStyle)) stylePresetParts.push(extraStyle);
+    }
+    const styleAnchorText = stylePresetParts.length > 0
+        ? stylePresetParts.join(', ')
+        : 'cinematic lighting, soft shadows, natural skin tones, shallow depth of field, high detail, photorealistic composition';
+
     const rawTemplate = typeof settings.summarizer_system_prompt_template === 'string'
         ? settings.summarizer_system_prompt_template
         : '';
@@ -3244,7 +3280,8 @@ async function summarizeWithAI(text, charName, userName, additionalCharacters = 
 
     const systemPrompt = template
         .replaceAll('{{APPEARANCE_LINES}}', appearanceText)
-        .replaceAll('{{OUTPUT_FORMAT_LINES}}', outputFormatLines);
+        .replaceAll('{{OUTPUT_FORMAT_LINES}}', outputFormatLines)
+        .replaceAll('{{STYLE_ANCHOR}}', styleAnchorText);
 
     // Inject model-aware prompt style instruction
     const promptStyleOverride = settings.prompt_style_override || 'auto';
