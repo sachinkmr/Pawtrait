@@ -66,6 +66,17 @@
 <span class="nig_checkbox_label">Auto-Summarize Prompts<small>Use AI to create image prompts</small></span>
 </label>
 <div class="nig_field">
+<label for="nig_summarizer_source">Summarizer Source</label>
+<select id="nig_summarizer_source" class="text_pole">
+<option value="provider">Same as Image Provider</option>
+<option value="profile">ST Connection Profile</option>
+<option value="ollama">Ollama (Local)</option>
+<option value="openai">OpenAI Compatible</option>
+</select>
+</div>
+<!-- Provider box -->
+<div id="nig_summarizer_provider_box">
+<div class="nig_field">
 <label for="nig_summarizer_model">Summarizer Model</label>
 <div class="nig_input_group">
 <select id="nig_summarizer_model" class="text_pole">
@@ -79,6 +90,50 @@
 <div id="nig_toggle_summarizer_models_btn" class="nig_input_btn" title="Show All Models"><i class="fa-solid fa-list"></i></div>
 </div>
 <small class="nig_hint">Refresh models from the selected provider. The list button toggles between recommended and all models.</small>
+</div>
+</div>
+<!-- Profile box -->
+<div id="nig_summarizer_profile_box" style="display:none;">
+<div class="nig_field">
+<label for="nig_summarizer_profile">Connection Profile</label>
+<div class="nig_input_group">
+<select id="nig_summarizer_profile" class="text_pole"><option value="">-- Select a profile --</option></select>
+<div id="nig_fetch_profiles_btn" class="nig_input_btn" title="Refresh Profiles"><i class="fa-solid fa-rotate"></i></div>
+</div>
+<small class="nig_hint">Uses your existing ST connection credentials securely.</small>
+</div>
+</div>
+<!-- Ollama box -->
+<div id="nig_summarizer_ollama_box" style="display:none;">
+<div class="nig_field">
+<label for="nig_summarizer_ollama_url">Ollama URL</label>
+<input id="nig_summarizer_ollama_url" type="text" class="text_pole" placeholder="http://localhost:11434" />
+</div>
+<div class="nig_field">
+<label for="nig_summarizer_ollama_model">Ollama Model</label>
+<div class="nig_input_group">
+<select id="nig_summarizer_ollama_model" class="text_pole"><option value="">-- Fetch models --</option></select>
+<div id="nig_fetch_ollama_models_btn" class="nig_input_btn" title="Fetch Ollama Models"><i class="fa-solid fa-rotate"></i></div>
+</div>
+</div>
+</div>
+<!-- OpenAI-compatible box -->
+<div id="nig_summarizer_openai_box" style="display:none;">
+<div class="nig_field">
+<label for="nig_summarizer_openai_url">API URL</label>
+<input id="nig_summarizer_openai_url" type="text" class="text_pole" placeholder="http://localhost:1234/v1" />
+</div>
+<div class="nig_field">
+<label for="nig_summarizer_openai_key">API Key (optional)</label>
+<input id="nig_summarizer_openai_key" type="password" class="text_pole" placeholder="sk-..." />
+</div>
+<div class="nig_field">
+<label for="nig_summarizer_openai_model_select">Model</label>
+<div class="nig_input_group">
+<select id="nig_summarizer_openai_model_select" class="text_pole"><option value="">-- Fetch models --</option></select>
+<div id="nig_fetch_openai_models_btn" class="nig_input_btn" title="Fetch Models"><i class="fa-solid fa-rotate"></i></div>
+</div>
+</div>
 </div>
 </div>
 </div>

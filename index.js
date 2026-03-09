@@ -70,6 +70,13 @@ const defaultSettings = {
     use_summarizer: false,
     auto_summarize: false,
     summarizer_model: 'deepseek-chat-cheaper',
+    summarizer_source: 'provider', // 'provider' | 'profile' | 'ollama' | 'openai'
+    summarizer_profile: '',
+    summarizer_ollama_url: 'http://localhost:11434',
+    summarizer_ollama_model: '',
+    summarizer_openai_url: 'http://localhost:1234/v1',
+    summarizer_openai_key: '',
+    summarizer_openai_model: '',
     summarizer_system_prompt_template: `You are an AI prompt generator for character-consistent image generation.
 
 CHARACTER APPEARANCE ANCHORS
@@ -595,6 +602,13 @@ async function loadSettings() {
     $('#nig_message_depth_value').text(s.message_depth);
     $('#nig_system_instruction').val(s.system_instruction);
     $('#nig_summarizer_model').val(s.summarizer_model);
+    // Summarizer source + per-source fields
+    const summarizerSrc = s.summarizer_source || 'provider';
+    $('#nig_summarizer_source').val(summarizerSrc);
+    $('#nig_summarizer_ollama_url').val(s.summarizer_ollama_url || 'http://localhost:11434');
+    $('#nig_summarizer_openai_url').val(s.summarizer_openai_url || 'http://localhost:1234/v1');
+    $('#nig_summarizer_openai_key').val(s.summarizer_openai_key || '');
+    updateSummarizerSourceUI(summarizerSrc);
     $('#nig_summarizer_system_prompt_template').val(
         (typeof s.summarizer_system_prompt_template === 'string' && s.summarizer_system_prompt_template.trim().length > 0)
             ? s.summarizer_system_prompt_template
@@ -627,14 +641,14 @@ async function loadSettings() {
     // Auto-fetch models if API key is set or provider doesn't require one
     const providerConfig = getProviderConfig(s);
     if (getCurrentApiKey() || providerConfig.noApiKeyRequired) {
-        // Fetch both image and chat model lists silently (if available)
+        // Fetch image model list silently (if available)
         await fetchModelsFromAPI(true); // Silent mode - no toasts on load
-        await fetchSummarizerModelsFromAPI(true);
-        // Model will be restored by updateModelDropdown/updateSummarizerDropdown using saved setting
     } else {
         // No API key - just show placeholder
         $('#nig_model').val(s.model);
     }
+    // Always fetch summarizer models — non-provider sources don't need an API key
+    await fetchSummarizerModelsFromAPI(true);
 
     updateModelInfo();
 
@@ -891,8 +905,106 @@ function updateVisionModelDropdown(models) {
     select.val(savedValue && select.find(`option[value="${savedValue}"]`).length ? savedValue : '');
 }
 
+/** Shows the provider-specific sub-section and hides the others. */
+function updateSummarizerSourceUI(source) {
+    $('#nig_summarizer_provider_box').toggle(source === 'provider');
+    $('#nig_summarizer_profile_box').toggle(source === 'profile');
+    $('#nig_summarizer_ollama_box').toggle(source === 'ollama');
+    $('#nig_summarizer_openai_box').toggle(source === 'openai');
+    // Toggle button (recommended vs all) is only meaningful for the provider source
+    $('#nig_toggle_summarizer_models_btn').toggle(source === 'provider');
+}
+
+function populateSummarizerProfileDropdown(profiles, selectedProfile) {
+    const select = $('#nig_summarizer_profile');
+    select.empty().append('<option value="">-- Select a profile --</option>');
+    for (const p of profiles) {
+        const name = p.name || p.id || '';
+        select.append(`<option value="${name}">${name}</option>`);
+    }
+    if (selectedProfile) select.val(selectedProfile);
+}
+
+function populateOllamaModelDropdown(models, selectedModel) {
+    const select = $('#nig_summarizer_ollama_model');
+    select.empty().append('<option value="">-- Select a model --</option>');
+    for (const m of models) {
+        const id = typeof m === 'string' ? m : (m.name || m.model || m.id || '');
+        if (id) select.append(`<option value="${id}">${id}</option>`);
+    }
+    if (selectedModel) select.val(selectedModel);
+}
+
+function populateOpenAIModelDropdown(models, selectedModel) {
+    const select = $('#nig_summarizer_openai_model_select');
+    select.empty().append('<option value="">-- Select a model --</option>');
+    for (const m of models) {
+        const id = typeof m === 'string' ? m : (m.id || m.name || '');
+        if (id) select.append(`<option value="${id}">${id}</option>`);
+    }
+    if (selectedModel) select.val(selectedModel);
+}
+
 async function fetchSummarizerModelsFromAPI(silent = false) {
     const settings = extension_settings[extensionName];
+    const source = settings.summarizer_source || 'provider';
+
+    // --- Profile source: read from ST's connectionManager ---
+    if (source === 'profile') {
+        try {
+            const stContext = SillyTavern.getContext();
+            const profiles = stContext?.extensionSettings?.connectionManager?.profiles || [];
+            populateSummarizerProfileDropdown(profiles, settings.summarizer_profile);
+            if (!silent) toastr.success(`Found ${profiles.length} connection profile(s)`, 'Pawtrait');
+        } catch (error) {
+            if (!silent) toastr.error(`Failed to read profiles: ${error.message}`, 'Pawtrait');
+        }
+        return;
+    }
+
+    // --- Ollama source ---
+    if (source === 'ollama') {
+        const baseUrl = (settings.summarizer_ollama_url || 'http://localhost:11434').replace(/\/$/, '');
+        const btn = $('#nig_fetch_ollama_models_btn');
+        if (btn.length) btn.find('i').removeClass('fa-rotate').addClass('fa-spinner fa-spin');
+        try {
+            const resp = await fetch(`${baseUrl}/api/tags`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            const models = data.models || [];
+            populateOllamaModelDropdown(models, settings.summarizer_ollama_model);
+            if (!silent) toastr.success(`Found ${models.length} Ollama model(s)`, 'Pawtrait');
+        } catch (error) {
+            if (!silent) toastr.error(`Failed to fetch Ollama models: ${error.message}`, 'Pawtrait');
+        } finally {
+            if (btn.length) btn.find('i').removeClass('fa-spinner fa-spin').addClass('fa-rotate');
+        }
+        return;
+    }
+
+    // --- OpenAI-compatible source ---
+    if (source === 'openai') {
+        const baseUrl = (settings.summarizer_openai_url || 'http://localhost:1234/v1').replace(/\/$/, '');
+        const headers = { 'Accept': 'application/json' };
+        if (settings.summarizer_openai_key) headers['Authorization'] = `Bearer ${settings.summarizer_openai_key}`;
+        const btn = $('#nig_fetch_openai_models_btn');
+        if (btn.length) btn.find('i').removeClass('fa-rotate').addClass('fa-spinner fa-spin');
+        try {
+            const resp = await fetch(`${baseUrl}/models`, { headers });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            const models = data.data || (Array.isArray(data) ? data : []);
+            populateOpenAIModelDropdown(models, settings.summarizer_openai_model);
+            if (!silent) toastr.success(`Found ${models.length} model(s)`, 'Pawtrait');
+        } catch (error) {
+            if (!silent) toastr.error(`Failed to fetch models: ${error.message}`, 'Pawtrait');
+        } finally {
+            if (btn.length) btn.find('i').removeClass('fa-spinner fa-spin').addClass('fa-rotate');
+        }
+        return;
+    }
+
+    // --- Default: 'provider' — original behavior ---
     const providerConfig = getProviderConfig(settings);
     // For summarizer, prefer the test URL (standard /v1/models) which has chat models
     const modelsUrl = providerConfig.modelsTestUrl || providerConfig.modelsUrl || settings.api_endpoint;
@@ -3200,8 +3312,9 @@ function formatSummaryForReadability(summary, characterNames = []) {
  */
 async function summarizeWithAI(text, charName, userName, additionalCharacters = []) {
     const settings = extension_settings[extensionName];
+    const summarizerSource = settings.summarizer_source || 'provider';
 
-    if (!getCurrentApiKey()) {
+    if (summarizerSource === 'provider' && !getCurrentApiKey()) {
         throw new Error('API key required for summarization');
     }
 
@@ -3299,28 +3412,24 @@ async function summarizeWithAI(text, charName, userName, additionalCharacters = 
 
 ${cleanedText.substring(0, 5000)}`;
 
-    console.log(`[${extensionName}] Summarizing with ${settings.summarizer_model} (input: ${cleanedText.length} chars)...`);
+    console.log(`[${extensionName}] Summarizing with ${summarizerSource} (input: ${cleanedText.length} chars)...`);
     console.log(`[${extensionName}] System prompt being sent:\n${finalSystemPrompt}`);
 
-    const chatBody = {
-        model: settings.summarizer_model,
-        messages: [
-            { role: 'system', content: finalSystemPrompt },
-            { role: 'user', content: userPrompt }
-        ],
-        max_tokens: 2500,
-        temperature: 0.3,
-    };
+    const summaryMessages = [
+        { role: 'system', content: finalSystemPrompt },
+        { role: 'user', content: userPrompt },
+    ];
 
     try {
-        addRuntimeLog('debug', 'Summarizer request body', chatBody);
-        const respJson = await sendChatRequest(settings, chatBody);
+        addRuntimeLog('debug', 'Summarizer request', { source: summarizerSource, model: settings.summarizer_model, messages: summaryMessages });
+        const respJson = await sendSummarizerRequest(settings, summaryMessages, 2500);
         const summary = respJson.choices?.[0]?.message?.content?.trim();
         if (!summary) throw new Error('No summary returned');
         const formattedSummary = formatSummaryForReadability(summary, listedCharacterNames);
         console.log(`[${extensionName}] AI Summary:`, formattedSummary);
         addRuntimeLog('info', 'Summarizer completed', {
-            model: chatBody.model,
+            source: summarizerSource,
+            model: settings.summarizer_model,
             summaryLength: formattedSummary.length,
             summaryPreview: formattedSummary.substring(0, 1200),
         });
@@ -3328,13 +3437,14 @@ ${cleanedText.substring(0, 5000)}`;
     } catch (err) {
         console.error(`[${extensionName}] Summarizer error:`, err);
         addRuntimeLog('error', 'Summarizer failed', {
-            model: chatBody.model,
+            source: summarizerSource,
+            model: settings.summarizer_model,
             error: err,
         });
         const msg = (err?.message || '').toString().toLowerCase();
 
-        // Detect model missing or provider route errors and try fallback
-        if (msg.includes('model_not_found') || msg.includes('model not found') || msg.includes('503')) {
+        // Model-not-found retry only makes sense for the provider source
+        if (summarizerSource === 'provider' && (msg.includes('model_not_found') || msg.includes('model not found') || msg.includes('503'))) {
             toastr.warning(`Summarizer model "${settings.summarizer_model}" not available. Trying to find an alternative...`, 'Pawtrait');
 
             // Refresh chat models silently
@@ -3353,9 +3463,9 @@ ${cleanedText.substring(0, 5000)}`;
                 });
 
                 try {
-                    chatBody.model = candidate;
-                    addRuntimeLog('debug', 'Summarizer retry request body', chatBody);
-                    const retryResp = await sendChatRequest(settings, chatBody);
+                    addRuntimeLog('debug', 'Summarizer retry request', { model: candidate, messages: summaryMessages });
+                    // settings.summarizer_model was updated above, sendSummarizerRequest will use it
+                    const retryResp = await sendSummarizerRequest(settings, summaryMessages, 2500);
                     const retrySummary = retryResp.choices?.[0]?.message?.content?.trim();
                     if (retrySummary) {
                         toastr.success('Summarizer succeeded with alternative model.', 'Pawtrait');
@@ -3419,7 +3529,9 @@ async function buildPromptText(prompt, sender = null, messageId = null) {
     });
 
     // If auto-summarize is enabled, send the full cleaned text to AI
-    if (settings.auto_summarize && getCurrentApiKey() && rawContent) {
+    const summarizerSource = settings.summarizer_source || 'provider';
+    const canSummarize = summarizerSource !== 'provider' || getCurrentApiKey();
+    if (settings.auto_summarize && canSummarize && rawContent) {
         try {
             console.log(`[${extensionName}] Auto-summarizing with ${settings.summarizer_model}...`);
             const cleanedContent = cleanText(rawContent);
@@ -5248,6 +5360,77 @@ async function sendChatRequest(settings, body, _retryCount = 0) {
     return result;
 }
 
+/**
+ * Sends a summarizer request to the configured source (provider / profile / ollama / openai).
+ * Always resolves to an OpenAI-compatible response shape: { choices: [{ message: { content } }] }
+ */
+async function sendSummarizerRequest(settings, messages, maxTokens = 2500) {
+    const source = settings.summarizer_source || 'provider';
+
+    if (source === 'profile') {
+        const stContext = SillyTavern.getContext();
+        const profiles = stContext?.extensionSettings?.connectionManager?.profiles || [];
+        const profileName = settings.summarizer_profile;
+        const profile = profiles.find(p => p.name === profileName);
+        if (!profile) throw new Error(`Connection profile "${profileName}" not found`);
+        if (!stContext.ConnectionManagerRequestService) throw new Error('ConnectionManagerRequestService is not available — ensure the Connection Manager extension is enabled');
+        const response = await stContext.ConnectionManagerRequestService.sendRequest(
+            profile.id, messages, maxTokens,
+            { stream: false, extractData: true, includePreset: true, includeInstruct: true },
+        );
+        const content = response?.content ?? (typeof response === 'string' ? response : response?.choices?.[0]?.message?.content) ?? '';
+        return { choices: [{ message: { content } }] };
+    }
+
+    if (source === 'ollama') {
+        const baseUrl = (settings.summarizer_ollama_url || 'http://localhost:11434').replace(/\/$/, '');
+        const model = settings.summarizer_ollama_model || '';
+        const systemMsg = messages.find(m => m.role === 'system')?.content || '';
+        const userMsg = messages.find(m => m.role === 'user')?.content || '';
+        const resp = await fetch(`${baseUrl}/api/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model, system: systemMsg, prompt: userMsg, stream: false, options: { num_predict: maxTokens } }),
+        });
+        if (!resp.ok) {
+            const errText = await resp.text();
+            throw new Error(`Ollama HTTP ${resp.status}: ${errText}`);
+        }
+        const data = await resp.json();
+        return { choices: [{ message: { content: data.response || '' } }] };
+    }
+
+    if (source === 'openai') {
+        const baseUrl = (settings.summarizer_openai_url || 'http://localhost:1234/v1').replace(/\/$/, '');
+        const headers = { 'Content-Type': 'application/json' };
+        if (settings.summarizer_openai_key) headers['Authorization'] = `Bearer ${settings.summarizer_openai_key}`;
+        const resp = await fetch(`${baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                model: settings.summarizer_openai_model || '',
+                messages,
+                max_tokens: maxTokens,
+                temperature: 0.3,
+                stream: false,
+            }),
+        });
+        if (!resp.ok) {
+            const errText = await resp.text();
+            throw new Error(`OpenAI-compat HTTP ${resp.status}: ${errText}`);
+        }
+        return await resp.json();
+    }
+
+    // Default: 'provider' — delegate to existing sendChatRequest
+    return sendChatRequest(settings, {
+        model: settings.summarizer_model,
+        messages,
+        max_tokens: maxTokens,
+        temperature: 0.3,
+    });
+}
+
 
 function addToGallery(imageData, prompt, messageId = null) {
     const settings = extension_settings[extensionName];
@@ -6244,6 +6427,49 @@ jQuery(async () => {
     });
 
     $('#nig_fetch_models_btn').on('click', fetchModelsFromAPI);
+
+    // Summarizer source selector
+    $('#nig_summarizer_source').on('change', function() {
+        const src = $(this).val();
+        extension_settings[extensionName].summarizer_source = src;
+        saveSettingsDebounced();
+        updateSummarizerSourceUI(src);
+        fetchSummarizerModelsFromAPI(true);
+    });
+
+    // Profile refresh
+    $('#nig_fetch_profiles_btn').on('click', function() { fetchSummarizerModelsFromAPI(false); });
+    $('#nig_summarizer_profile').on('change', function() {
+        extension_settings[extensionName].summarizer_profile = $(this).val();
+        saveSettingsDebounced();
+    });
+
+    // Ollama
+    $('#nig_summarizer_ollama_url').on('change', function() {
+        extension_settings[extensionName].summarizer_ollama_url = $(this).val().trim();
+        saveSettingsDebounced();
+    });
+    $('#nig_fetch_ollama_models_btn').on('click', function() { fetchSummarizerModelsFromAPI(false); });
+    $('#nig_summarizer_ollama_model').on('change', function() {
+        extension_settings[extensionName].summarizer_ollama_model = $(this).val();
+        saveSettingsDebounced();
+    });
+
+    // OpenAI-compat
+    $('#nig_summarizer_openai_url').on('change', function() {
+        extension_settings[extensionName].summarizer_openai_url = $(this).val().trim();
+        saveSettingsDebounced();
+    });
+    $('#nig_summarizer_openai_key').on('change', function() {
+        extension_settings[extensionName].summarizer_openai_key = $(this).val().trim();
+        saveSettingsDebounced();
+    });
+    $('#nig_fetch_openai_models_btn').on('click', function() { fetchSummarizerModelsFromAPI(false); });
+    $('#nig_summarizer_openai_model_select').on('change', function() {
+        extension_settings[extensionName].summarizer_openai_model = $(this).val();
+        saveSettingsDebounced();
+    });
+
     $('#nig_fetch_summarizer_models_btn').on('click', function() { fetchSummarizerModelsFromAPI(false); });
     $('#nig_toggle_summarizer_models_btn').on('click', async function() {
         summarizerModelListMode = summarizerModelListMode === 'all' ? 'recommended' : 'all';
