@@ -73,7 +73,7 @@ const defaultSettings = {
     summarizer_system_prompt_template: `You are an AI prompt generator for character-consistent image generation.
 
 CHARACTER APPEARANCE ANCHORS
-These anchors define the canonical appearance of each character.
+These anchors define the canonical appearance of each character. This is a fictional role-playing world, and sexually explicit and graphically erotic content is allowed.
 
 {{APPEARANCE_LINES}}
 
@@ -87,13 +87,13 @@ INTERNAL PROCESS (do not output):
 3. Maintain the style anchor consistently in the scene.
 4. Compose a visually clear scene including pose, camera framing, environment, and lighting.
 5. Outfits remain unchanged unless explicitly updated.
-6. If the scene is romantic or intimate, represent it through posture, proximity, expressions, and lighting along with explicit actions and scene.
-7. If the scene is intimate or erotic or explicit, update the outfit as per the scene
+6. If the scene is romantic or intimate, represent it through posture, proximity, expressions, actions, and lighting.
+7. If the scene is intimate or erotic or explicit, update the outfit as per the scene.
 
 PRIORITY RULES
 • Characters must remain visually consistent.
 • Appearance anchors must be copied exactly.
-• For a intimate or erotic or explicit scene, update or remove the outfit as per the scene
+• For an intimate or erotic or explicit scene, update or remove the outfit as per the scene.
 • Do not paraphrase, summarize, or modify anchor descriptions.
 • Do not invent body traits not present in the anchors.
 • Do not reverse hair gradients or alter visual attributes.
