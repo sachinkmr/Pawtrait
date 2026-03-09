@@ -87,7 +87,7 @@ INTERNAL PROCESS (do not output):
 3. Maintain the style anchor consistently in the scene.
 4. Compose a visually clear scene including pose, camera framing, environment, and lighting.
 5. Outfits remain unchanged unless explicitly updated.
-6. If the scene is romantic or intimate, represent it through posture, proximity, expressions, and lighting rather along with explicit actions and scene.
+6. If the scene is romantic or intimate, represent it through posture, proximity, expressions, and lighting along with explicit actions and scene.
 7. If the scene is intimate or erotic or explicit, update the outfit as per the scene
 
 PRIORITY RULES
@@ -107,10 +107,10 @@ OUTPUT FORMAT
 
 Characters:
 
-* Character Name: exact appearance anchor
+{{OUTPUT_FORMAT_LINES}}
 
 Camera: [composition, framing, shot type — e.g. "close-up, eye-level, full body"]
-    Lighting: [light source, direction, mood — e.g. "soft side light, warm tones, slight haze"]
+Lighting: [light source, direction, mood — e.g. "soft side light, warm tones, slight haze"]
 
 Scene:
 2–3 sentences describing pose, environment, and emotional tone.
