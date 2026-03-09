@@ -3269,7 +3269,7 @@ async function summarizeWithAI(text, charName, userName, additionalCharacters = 
     }
     const styleAnchorText = stylePresetParts.length > 0
         ? stylePresetParts.join(', ')
-        : 'cinematic lighting, soft shadows, natural skin tones, shallow depth of field, high detail, photorealistic composition';
+        : 'high quality, detailed rendering, consistent style';
 
     const rawTemplate = typeof settings.summarizer_system_prompt_template === 'string'
         ? settings.summarizer_system_prompt_template
