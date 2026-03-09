@@ -74,6 +74,7 @@ const defaultSettings = {
     summarizer_profile: '',
     summarizer_ollama_url: 'http://localhost:11434',
     summarizer_ollama_model: '',
+    summarizer_openai_preset: 'custom',
     summarizer_openai_url: 'http://localhost:1234/v1',
     summarizer_openai_key: '',
     summarizer_openai_model: '',
@@ -606,6 +607,7 @@ async function loadSettings() {
     const summarizerSrc = s.summarizer_source || 'provider';
     $('#nig_summarizer_source').val(summarizerSrc);
     $('#nig_summarizer_ollama_url').val(s.summarizer_ollama_url || 'http://localhost:11434');
+    $('#nig_summarizer_openai_preset').val(s.summarizer_openai_preset || 'custom');
     $('#nig_summarizer_openai_url').val(s.summarizer_openai_url || 'http://localhost:1234/v1');
     $('#nig_summarizer_openai_key').val(s.summarizer_openai_key || '');
     updateSummarizerSourceUI(summarizerSrc);
@@ -6478,8 +6480,27 @@ jQuery(async () => {
     });
 
     // OpenAI-compat
+    const OPENAI_PRESETS = {
+        lmstudio: 'http://localhost:1234/v1',
+        kobold:   'http://localhost:5001/v1',
+        textgen:  'http://localhost:5000/v1',
+        vllm:     'http://localhost:8000/v1',
+    };
+    $('#nig_summarizer_openai_preset').on('change', function() {
+        const preset = $(this).val();
+        extension_settings[extensionName].summarizer_openai_preset = preset;
+        if (preset !== 'custom' && OPENAI_PRESETS[preset]) {
+            const url = OPENAI_PRESETS[preset];
+            $('#nig_summarizer_openai_url').val(url);
+            extension_settings[extensionName].summarizer_openai_url = url;
+        }
+        saveSettingsDebounced();
+    });
     $('#nig_summarizer_openai_url').on('change', function() {
         extension_settings[extensionName].summarizer_openai_url = $(this).val().trim();
+        // Reset preset to custom if URL was manually edited
+        $('#nig_summarizer_openai_preset').val('custom');
+        extension_settings[extensionName].summarizer_openai_preset = 'custom';
         saveSettingsDebounced();
     });
     $('#nig_summarizer_openai_key').on('change', function() {
