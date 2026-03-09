@@ -109,8 +109,8 @@ Characters:
 
 * Character Name: exact appearance anchor
 
-Camera: [camera angle, lens choice, shot type — e.g. "close-up portrait, 85mm, eye-level"]
-Lighting: [lighting type, direction, color temperature — e.g. "soft rim light, warm golden hour, slight haze"]
+Camera: [composition, framing, shot type — e.g. "close-up, eye-level, full body"]
+    Lighting: [light source, direction, mood — e.g. "soft side light, warm tones, slight haze"]
 
 Scene:
 2–3 sentences describing pose, environment, and emotional tone.
