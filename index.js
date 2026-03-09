@@ -670,7 +670,7 @@ async function loadSettings() {
 let cachedModels = [];
 let cachedChatModels = []; // Cache for chat/summarizer models
 
-const SUMMARIZER_RECOMMENDED_COUNT = 5;
+const SUMMARIZER_RECOMMENDED_COUNT = 20;
 let summarizerModelListMode = 'recommended'; // 'recommended' | 'all'
 
 function updateSummarizerModelListToggleButton() {
@@ -721,11 +721,11 @@ function buildSummarizerCandidates(models) {
             return false;
         }
 
-        // Include if it matches known chat model patterns OR has explicit text output
-        const isKnownChatModel = /gpt|openai|claude|gemini|deepseek|llama|mistral|qwen|phi|command|grok|nova|kimi|glm|minimax|perplexity|sonar/.test(id);
-        const hasTextOutput = outputModalities.includes('text');
+        // Exclude known non-chat (image/audio/video) model names — include everything else
+        const isNonChatModel = /image|diffusion|dall-e|flux|stable|midjourney|embed|whisper|tts[-_]|stt[-_]|video|seedance|veo|wan|nanobanana|seedream|gptimage|klein|recraft|ideogram|kandinsky|playground|sdxl/.test(id);
+        if (isNonChatModel) return false;
 
-        return isKnownChatModel || hasTextOutput;
+        return true;
     });
 }
 
