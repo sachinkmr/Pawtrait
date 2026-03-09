@@ -5847,6 +5847,25 @@ async function showEditGeneratePopup(messageId) {
         </label>
     `).join('');
 
+    // Build summarizer model info for the popup header
+    const popupSummarizerSource = settings.summarizer_source || 'provider';
+    const popupSummarizerSourceLabel = {
+        provider: 'Image Provider',
+        profile: `Profile: ${settings.summarizer_profile || '—'}`,
+        ollama: `Ollama`,
+        openai: 'OpenAI-compat',
+    }[popupSummarizerSource] || popupSummarizerSource;
+    const popupSummarizerModel = popupSummarizerSource === 'provider'
+        ? (settings.summarizer_model || '—')
+        : popupSummarizerSource === 'ollama'
+            ? (settings.summarizer_ollama_model || '—')
+            : popupSummarizerSource === 'openai'
+                ? (settings.summarizer_openai_model || '—')
+                : '';
+    const popupSummarizerLabel = popupSummarizerModel
+        ? `${popupSummarizerSourceLabel} / ${popupSummarizerModel}`
+        : popupSummarizerSourceLabel;
+
     const popup = $(`
         <div class="nig_edit_overlay">
             <div class="nig_edit_popup">
@@ -5855,6 +5874,9 @@ async function showEditGeneratePopup(messageId) {
                     <i class="fa-solid fa-xmark nig_edit_close"></i>
                 </div>
                 <div class="nig_edit_body">
+                    <div class="nig_edit_section nig_edit_summarizer_row">
+                        <span class="nig_hint"><i class="fa-solid fa-robot"></i> Summarizer: <strong>${popupSummarizerLabel}</strong></span>
+                    </div>
                     <div class="nig_edit_section">
                         <label>Prompt</label>
                         <textarea id="nig_edit_prompt" class="text_pole" rows="8">${initialPrompt}</textarea>
