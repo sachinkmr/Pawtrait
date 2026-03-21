@@ -167,6 +167,9 @@ Scene:
     // Scene-aware character reference images
     use_scene_char_refs: false,
 
+    // Character art style (used in auto-mode to pick prompt format)
+    char_art_style: 'auto', // 'auto' | 'realistic' | 'anime' | 'semi-realistic'
+
     // Model-aware prompt style
     prompt_style_override: 'auto', // 'auto' | 'natural' | 'tags' | 'mixed'
 
@@ -660,6 +663,7 @@ async function loadSettings() {
     $('#nig_seed_locked').prop('checked', s.seed_locked || false);
     $('#nig_edit_before_generate').prop('checked', s.edit_before_generate || false);
     $('#nig_use_scene_char_refs').prop('checked', s.use_scene_char_refs || false);
+    $('#nig_char_art_style').val(s.char_art_style || 'auto');
     $('#nig_prompt_style_override').val(s.prompt_style_override || 'auto');
 
     // Auto-generate
@@ -3400,9 +3404,12 @@ async function summarizeWithAI(text, charName, userName, additionalCharacters = 
 
     // Inject model-aware prompt style instruction
     const promptStyleOverride = settings.prompt_style_override || 'auto';
-    const effectiveStyle = promptStyleOverride === 'auto'
-        ? getPromptStyleForModel(settings.model || '')
-        : promptStyleOverride;
+    const charArtStyle = settings.char_art_style || 'auto';
+    const effectiveStyle = promptStyleOverride !== 'auto'
+        ? promptStyleOverride
+        : charArtStyle !== 'auto'
+            ? getPromptStyleForArtStyle(charArtStyle)
+            : getPromptStyleForModel(settings.model || '');
     const styleInstruction = getPromptStyleInstructions(effectiveStyle);
     const finalSystemPrompt = systemPrompt.includes('{{PROMPT_STYLE}}')
         ? systemPrompt.replaceAll('{{PROMPT_STYLE}}', styleInstruction)
@@ -3636,6 +3643,19 @@ async function buildPromptText(prompt, sender = null, messageId = null) {
         prompt: fullPrompt,
     });
     return fullPrompt.trim();
+}
+
+/**
+ * Map character art style to prompt format.
+ * Realistic → natural language, Anime → tag-based, Semi-Realistic → mixed.
+ */
+function getPromptStyleForArtStyle(artStyle) {
+    switch (String(artStyle || '').toLowerCase()) {
+        case 'realistic':     return 'natural';
+        case 'anime':         return 'tags';
+        case 'semi-realistic': return 'mixed';
+        default:              return 'mixed';
+    }
 }
 
 /**
@@ -6907,6 +6927,11 @@ jQuery(async () => {
 
     $('#nig_use_scene_char_refs').on('change', function() {
         extension_settings[extensionName].use_scene_char_refs = $(this).prop('checked');
+        saveSettingsDebounced();
+    });
+
+    $('#nig_char_art_style').on('change', function() {
+        extension_settings[extensionName].char_art_style = $(this).val();
         saveSettingsDebounced();
     });
 

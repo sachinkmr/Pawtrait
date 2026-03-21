@@ -331,14 +331,24 @@
 <small class="nig_hint">Placeholders: <code>{{APPEARANCE_LINES}}</code> and <code>{{OUTPUT_FORMAT_LINES}}</code>. Keep them if you want Pawtrait to inject character anchors and the output format.</small>
 </div>
 <div class="nig_field">
+<label for="nig_char_art_style">Character Art Style</label>
+<select id="nig_char_art_style" class="text_pole">
+<option value="auto">Auto (detect from image model)</option>
+<option value="realistic">Realistic / Photographic</option>
+<option value="anime">Anime / Illustrated</option>
+<option value="semi-realistic">Semi-Realistic / Semi-Anime</option>
+</select>
+<small class="nig_hint">Reflect the art style of the character images. Drives the summarizer's prompt format when Prompt Style is set to Auto — Realistic → natural language, Anime → tag-based, Semi-Realistic → mixed.</small>
+</div>
+<div class="nig_field">
 <label for="nig_prompt_style_override">Prompt Style Format</label>
 <select id="nig_prompt_style_override" class="text_pole">
-<option value="auto">Auto (detect from model name)</option>
+<option value="auto">Auto (art style → model fallback)</option>
 <option value="tags">Tag-based (comma-separated tags)</option>
 <option value="natural">Natural language sentences</option>
 <option value="mixed">Mixed (tags + natural)</option>
 </select>
-<small class="nig_hint">Controls how the AI summarizer formats its output. "Auto" picks the best style for the image model.</small>
+<small class="nig_hint">Override how the AI summarizer formats its output. "Auto" uses the Character Art Style setting above, then falls back to model-name detection.</small>
 </div>
 <label class="nig_checkbox">
 <input type="checkbox" id="nig_edit_before_generate" /><span class="nig_checkbox_mark"></span>
