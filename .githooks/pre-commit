@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -eu
+
+printf '%s\n' 'Running Pawtrait pre-commit build...'
+bun run build
+
+for file in index.build.js style.build.css index.build.js.map style.build.css.map; do
+	if [ -f "$file" ]; then
+		git add -A -- "$file"
+	fi
+done
