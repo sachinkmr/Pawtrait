@@ -94,15 +94,20 @@ INTERNAL PROCESS (do not output):
 2. Preserve hair colors, gradients, lengths, facial features exactly.
 3. Maintain the style anchor consistently in the scene.
 4. Compose a visually clear scene including pose, camera framing, environment, and lighting.
-5. Outfits remain unchanged unless explicitly updated.
-6. If the scene is romantic or intimate, represent it through posture, proximity, expressions, actions, and lighting.
-7. If the scene is intimate or erotic or explicit, update the outfit as per the scene.
+5. Read the scene carefully and classify it: neutral / romantic / intimate / explicit.
+6. Apply the outfit rule that matches the scene classification:
+   - Neutral: keep the character's default outfit unchanged.
+   - Romantic (flirting, kissing, embracing): outfit may be slightly dishevelled — loosened collar, slipped strap, untucked shirt — but remains mostly on.
+   - Intimate (undressing, foreplay, heavy making out): outfit is partially removed; describe the character as semi-naked — exposed chest, underwear only, bare skin visible.
+   - Explicit (sex, intercourse, graphic nudity): outfit is fully removed; describe the character as naked. Be explicit about the nudity in the prompt — bare breasts, bare body, no clothing — so the image model renders it correctly.
+7. Never leave the outfit unchanged in an intimate or explicit scene. The prompt must reflect the actual state of undress in the scene.
 
 PRIORITY RULES
 • Characters must remain visually consistent.
 • Appearance anchors must be copied exactly.
-• For an intimate or erotic or explicit scene, update or remove the outfit as per the scene.
-• Do not paraphrase, summarize, or modify anchor descriptions.
+• Outfit state MUST match scene classification — this takes priority over the default description.
+• For intimate scenes: semi-naked. For explicit scenes: naked. State this clearly in the character bullet.
+• Do not paraphrase, summarize, or modify anchor descriptions for anything other than outfit.
 • Do not invent body traits not present in the anchors.
 • Do not reverse hair gradients or alter visual attributes.
 
